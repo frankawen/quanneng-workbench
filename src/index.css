@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+:root {
+  font-family: 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #faf8f5 0%, #f5f0eb 100%);
+  color: #3d3d3d;
+}
+
+/* 柔和的卡片风格 */
+.app-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+/* 主色调 - 奶油马卡龙粉橙 */
+.accent-pink {
+  color: #e8a0b4;
+}
+.bg-accent-pink {
+  background-color: #e8a0b4;
+}
+.accent-orange {
+  color: #f4a46a;
+}
+.bg-accent-orange {
+  background-color: #f4a46a;
+}
