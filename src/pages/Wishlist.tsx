@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, ensureAnonymousLogin } from '../lib/supabase'
 import Card from '../components/Card'
 import { Camera, Plus, Trash2, ShoppingBag } from 'lucide-react'
 import { recognizeImage } from '../utils/recognize'
@@ -22,6 +22,7 @@ export default function Wishlist() {
   const [recognizing, setRecognizing] = useState(false)
 
   useEffect(() => {
+    ensureAnonymousLogin()
     loadItems()
   }, [])
 
@@ -31,7 +32,7 @@ export default function Wishlist() {
         .from('wishlist')
         .select('*')
         .order('created_at', { ascending: false })
-      
+
       if (error) throw error
       setItems(data || [])
     } catch (err) {
@@ -78,7 +79,7 @@ export default function Wishlist() {
       .from('wishlist')
       .update({ purchased: !item.purchased })
       .eq('id', id)
-    
+
     if (error) {
       setError('操作失败，请重试')
       return
@@ -90,9 +91,8 @@ export default function Wishlist() {
     setRecognizing(true)
     try {
       let imageBase64: string
-      
+
       if (inputType === 'camera') {
-        // 调用相机
         const cameraInput = document.createElement('input')
         cameraInput.type = 'file'
         cameraInput.accept = 'image/*'
@@ -106,7 +106,6 @@ export default function Wishlist() {
         }
         cameraInput.click()
       } else {
-        // 上传图片
         const fileInput = document.createElement('input')
         fileInput.type = 'file'
         fileInput.accept = 'image/*'
@@ -141,7 +140,6 @@ export default function Wishlist() {
       const result = await recognizeImage(base64)
       if (result?.data?.choices?.[0]?.message?.content) {
         const text = result.data.choices[0].message.content
-        // 提取商品名称
         const match = text.match(/商品名[:：]?\s*(.+)/) || text.match(/(.{2,20}?)[,.，。]/)
         if (match) {
           setNewItem({ name: match[1].trim(), price: '', urgency: 'medium' })
@@ -155,21 +153,26 @@ export default function Wishlist() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-stone-400">加载中...</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ fontFamily: 'var(--font-ui)', fontSize: '14px', color: 'var(--text-light)' }}>加载中...</div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-stone-700">待买清单</h1>
-        <div className="flex gap-2">
+        <div>
+          <h1 className="section-title">待买清单</h1>
+          <p className="section-subtitle">记录想买的商品，理性消费不踩坑</p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => handleImageRecognition('camera')}
             disabled={recognizing}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 text-sm"
+            className="btn-secondary"
+            style={{ opacity: recognizing ? 0.5 : 1 }}
           >
             <Camera className="w-4 h-4" />
             <span className="hidden sm:inline">拍照识图</span>
@@ -177,14 +180,15 @@ export default function Wishlist() {
           <button
             onClick={() => handleImageRecognition('upload')}
             disabled={recognizing}
-            className="flex items-center gap-2 px-3 py-2 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-colors disabled:opacity-50 text-sm"
+            className="btn-secondary"
+            style={{ opacity: recognizing ? 0.5 : 1 }}
           >
             <ShoppingBag className="w-4 h-4" />
             <span className="hidden sm:inline">上传图片</span>
           </button>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors"
+            className="btn-primary"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">手动添加</span>
@@ -192,38 +196,44 @@ export default function Wishlist() {
         </div>
       </div>
 
-      {/* 添加表单 */}
+      {/* Add Form */}
       {showForm && (
         <Card title="添加商品">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-stone-600 mb-1">商品名称</label>
+              <label className="block" style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                商品名称
+              </label>
               <input
                 type="text"
                 value={newItem.name}
                 onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                className="form-input"
                 placeholder="输入商品名称"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-stone-600 mb-1">预估价格</label>
+                <label className="block" style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  预估价格
+                </label>
                 <input
                   type="number"
                   step="0.01"
                   value={newItem.price}
                   onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  className="form-input"
                   placeholder="0.00"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-stone-600 mb-1">优先级</label>
+                <label className="block" style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  优先级
+                </label>
                 <select
                   value={newItem.urgency}
                   onChange={(e) => setNewItem({ ...newItem, urgency: e.target.value as 'high' | 'medium' | 'low' })}
-                  className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  className="form-input"
                 >
                   <option value="high">紧急</option>
                   <option value="medium">一般</option>
@@ -231,16 +241,16 @@ export default function Wishlist() {
                 </select>
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-2">
               <button
                 onClick={handleAddItem}
-                className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+                className="btn-primary flex-1 justify-center"
               >
                 确认添加
               </button>
               <button
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200 transition-colors"
+                className="btn-secondary"
               >
                 取消
               </button>
@@ -249,38 +259,71 @@ export default function Wishlist() {
         </Card>
       )}
 
-      {/* 清单列表 */}
+      {/* Items List */}
       <Card title={`待购买 (${items.filter(i => !i.purchased).length})`}>
         {items.length === 0 ? (
-          <p className="text-center text-stone-400 py-8">清单是空的，开始添加想买的商品吧</p>
+          <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-light)', fontFamily: 'var(--font-ui)', fontSize: '14px' }}>
+            清单是空的，开始添加想买的商品吧
+          </div>
         ) : (
           <div className="space-y-2">
             {items.map((item) => (
               <div
                 key={item.id}
-                className={`flex items-center justify-between p-3 rounded-lg transition-all ${
-                  item.purchased ? 'bg-stone-50 opacity-50' : 'bg-white hover:bg-stone-50'
-                }`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '14px 16px',
+                  borderRadius: '10px',
+                  background: item.purchased ? 'var(--bg-sidebar)' : 'white',
+                  opacity: item.purchased ? 0.6 : 1,
+                  transition: 'all 0.15s ease',
+                }}
               >
-                <div className="flex items-center gap-3">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
                   <button
                     onClick={() => handleTogglePurchased(item.id!)}
-                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                      item.purchased ? 'bg-emerald-500 border-emerald-500' : 'border-stone-300 hover:border-emerald-400'
-                    }`}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      border: `2px solid ${item.purchased ? 'var(--color-success)' : 'var(--border)'}`,
+                      background: item.purchased ? 'var(--color-success)' : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                      transition: 'all 0.15s',
+                    }}
                   >
-                    {item.purchased && <Check className="w-4 h-4 text-white" />}
+                    {item.purchased && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
                   </button>
-                  <div>
-                    <p className={`font-medium ${item.purchased ? 'line-through text-stone-400' : 'text-stone-700'}`}>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      color: item.purchased ? 'var(--text-light)' : 'var(--text-dark)',
+                      textDecoration: item.purchased ? 'line-through' : 'none',
+                    }}>
                       {item.name}
                     </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {item.price && <span className="text-sm text-stone-400">¥{item.price}</span>}
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${
-                        item.urgency === 'high' ? 'bg-rose-100 text-rose-600' :
-                        item.urgency === 'medium' ? 'bg-amber-100 text-amber-600' :
-                        'bg-emerald-100 text-emerald-600'
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                      {item.price && (
+                        <span style={{ fontFamily: 'var(--font-ui)', fontSize: '13px', color: 'var(--text-light)' }}>
+                          ¥{item.price}
+                        </span>
+                      )}
+                      <span className={`badge ${
+                        item.urgency === 'high' ? 'badge-pink' :
+                        item.urgency === 'medium' ? 'badge-amber' :
+                        'badge-green'
                       }`}>
                         {item.urgency === 'high' ? '紧急' : item.urgency === 'medium' ? '一般' : '不急'}
                       </span>
@@ -289,7 +332,16 @@ export default function Wishlist() {
                 </div>
                 <button
                   onClick={() => item.id && handleDeleteItem(item.id)}
-                  className="p-1 text-stone-400 hover:text-rose-500 transition-colors"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    color: 'var(--text-light)',
+                    transition: 'color 0.15s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-accent-pink)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-light)')}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -300,18 +352,16 @@ export default function Wishlist() {
       </Card>
 
       {error && (
-        <div className="p-4 bg-rose-50 text-rose-600 rounded-lg text-center">
-          {error} - <button onClick={loadItems} className="underline">重试</button>
+        <div style={{ padding: '16px', background: 'var(--color-accent-pink-light)', borderRadius: '12px', textAlign: 'center', fontFamily: 'var(--font-ui)', fontSize: '14px', color: '#B06868' }}>
+          {error} -{' '}
+          <button
+            onClick={loadItems}
+            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
+          >
+            重试
+          </button>
         </div>
       )}
     </div>
-  )
-}
-
-function Check({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
   )
 }

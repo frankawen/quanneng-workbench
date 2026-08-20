@@ -4,18 +4,27 @@ interface Props {
   unit?: string
   trend?: { value: number; positive: boolean }
   className?: string
+  accent?: 'pink' | 'blue' | 'amber' | 'green'
 }
 
-export default function StatCard({ label, value, unit, trend, className = '' }: Props) {
+export default function StatCard({ label, value, unit, trend, className = '', accent }: Props) {
+  const accentColors: Record<string, string> = {
+    pink: 'var(--color-accent-pink)',
+    blue: 'var(--color-accent-blue)',
+    amber: 'var(--color-accent-amber)',
+    green: 'var(--color-success)',
+  }
+  const color = accent ? accentColors[accent] : 'var(--text-dark)'
+
   return (
-    <div className={`app-card p-4 ${className}`}>
-      <p className="text-sm text-stone-400 mb-1">{label}</p>
-      <div className="flex items-baseline gap-1">
-        <span className="text-2xl font-semibold text-stone-700">{value}</span>
-        {unit && <span className="text-sm text-stone-400">{unit}</span>}
+    <div className={`stat-card ${className}`} style={{ borderColor: accent ? `${accentColors[accent]}30` : undefined }}>
+      <p className="stat-label">{label}</p>
+      <div className="stat-value" style={{ color }}>
+        {value}
+        {unit && <span className="stat-unit">{unit}</span>}
       </div>
       {trend && (
-        <p className={`text-xs mt-2 ${trend.positive ? 'text-rose-500' : 'text-emerald-500'}`}>
+        <p style={{ fontFamily: 'var(--font-ui)', fontSize: '11px', color: trend.positive ? 'var(--color-accent-pink)' : 'var(--color-success)', marginTop: '6px' }}>
           {trend.positive ? '↑' : '↓'} {Math.abs(trend.value)}%
         </p>
       )}

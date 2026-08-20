@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, ensureAnonymousLogin } from '../lib/supabase'
 import Card from '../components/Card'
+import StatCard from '../components/StatCard'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Plus, Trash2 } from 'lucide-react'
 import { format, addDays } from 'date-fns'
@@ -36,6 +37,7 @@ export default function Fitness() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    ensureAnonymousLogin()
     loadData()
   }, [])
 
@@ -86,110 +88,152 @@ export default function Fitness() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-stone-400">加载中...</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ fontFamily: 'var(--font-ui)', fontSize: '14px', color: 'var(--text-light)' }}>加载中...</div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-stone-700">减脂健身</h1>
+        <div>
+          <h1 className="section-title">减脂健身</h1>
+          <p className="section-subtitle">记录体重变化，科学管理健康</p>
+        </div>
         <div className="flex gap-2">
           <button
             onClick={() => setShowPlanForm(!showPlanForm)}
-            className="px-4 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors text-sm"
+            className="btn-secondary"
           >
             周计划
           </button>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="px-4 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors text-sm"
+            className="btn-primary"
           >
-            <Plus className="w-4 h-4 inline mr-1" />
+            <Plus className="w-4 h-4" />
             记录体重
           </button>
         </div>
       </div>
 
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card title="当前体重">
-          <p className="text-3xl font-bold text-stone-700">{records[0]?.weight || '--'}<span className="text-base font-normal text-stone-400 ml-1">kg</span></p>
-        </Card>
-        <Card title="体脂率">
-          <p className="text-3xl font-bold text-stone-700">{records[0]?.bodyFat || '--'}<span className="text-base font-normal text-stone-400 ml-1">%</span></p>
-        </Card>
-        <Card title="BMI">
-          <p className="text-3xl font-bold text-stone-700">{records[0]?.bmi || '--'}</p>
-        </Card>
-        <Card title="本周运动">
-          <p className="text-3xl font-bold text-stone-700">{plans.filter(p => p.week === format(new Date(), 'yyyy-Www')).length}<span className="text-base font-normal text-stone-400 ml-1">次</span></p>
-        </Card>
+      {/* Stats Grid */}
+      <div className="stats-grid">
+        <StatCard
+          label="当前体重"
+          value={records[0]?.weight?.toFixed(1) || '--'}
+          unit="kg"
+          accent="amber"
+        />
+        <StatCard
+          label="体脂率"
+          value={records[0]?.bodyFat?.toFixed(1) || '--'}
+          unit="%"
+          accent="green"
+        />
+        <StatCard
+          label="BMI"
+          value={records[0]?.bmi?.toFixed(1) || '--'}
+          accent="blue"
+        />
+        <StatCard
+          label="本周运动"
+          value={String(plans.filter(p => p.week === format(new Date(), 'yyyy-Www')).length)}
+          unit="次"
+          accent="pink"
+        />
       </div>
 
-      {/* 体重趋势图 */}
+      {/* Weight Trend Chart */}
       <Card title="7日体重趋势">
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-            <YAxis domain={['auto', 'auto']} tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Line type="monotone" dataKey="weight" stroke="#f97316" strokeWidth={2} dot={{ fill: '#f97316' }} />
+        <ResponsiveContainer width="100%" height={220}>
+          <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis
+              dataKey="date"
+              tick={{ fontSize: 12, fontFamily: 'var(--font-ui)', fill: 'var(--text-light)' }}
+            />
+            <YAxis
+              domain={['auto', 'auto']}
+              tick={{ fontSize: 12, fontFamily: 'var(--font-ui)', fill: 'var(--text-light)' }}
+            />
+            <Tooltip
+              contentStyle={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '13px',
+                borderRadius: '10px',
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-card)',
+              }}
+            />
+            <Line
+              type="monotone"
+              dataKey="weight"
+              stroke="var(--color-accent-amber)"
+              strokeWidth={2}
+              dot={{ fill: 'var(--color-accent-amber)', r: 4 }}
+              activeDot={{ r: 6 }}
+            />
           </LineChart>
         </ResponsiveContainer>
       </Card>
 
-      {/* 添加体重表单 */}
+      {/* Add Weight Form */}
       {showForm && (
         <Card title="记录体重">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-stone-600 mb-1">体重 (kg)</label>
+                <label className="block" style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  体重 (kg)
+                </label>
                 <input
                   type="number"
                   step="0.1"
                   value={newRecord.weight}
                   onChange={(e) => setNewRecord({ ...newRecord, weight: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                  className="form-input"
                   placeholder="65.5"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-stone-600 mb-1">体脂率 (%)</label>
+                <label className="block" style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  体脂率 (%)
+                </label>
                 <input
                   type="number"
                   step="0.1"
                   value={newRecord.bodyFat}
                   onChange={(e) => setNewRecord({ ...newRecord, bodyFat: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                  className="form-input"
                   placeholder="20.5"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-stone-600 mb-1">备注</label>
+              <label className="block" style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                备注
+              </label>
               <input
                 type="text"
                 value={newRecord.notes}
                 onChange={(e) => setNewRecord({ ...newRecord, notes: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                className="form-input"
                 placeholder="今天感觉不错"
               />
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-2">
               <button
                 onClick={handleSubmitRecord}
-                className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                className="btn-primary flex-1 justify-center"
               >
                 确认记录
               </button>
               <button
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200 transition-colors"
+                className="btn-secondary"
               >
                 取消
               </button>
@@ -198,29 +242,36 @@ export default function Fitness() {
         </Card>
       )}
 
-      {/* 周计划表单 */}
+      {/* Weekly Plan */}
       {showPlanForm && (
         <Card title="编辑周计划">
           <div className="space-y-3">
             {plans.map((plan, idx) => (
-              <div key={plan.id} className="flex items-center gap-3 p-3 bg-stone-50 rounded-lg">
-                <span className="px-2 py-1 bg-orange-100 text-orange-600 rounded text-sm font-medium">
-                  周{plan.day}
-                </span>
-                <span className="flex-1 text-stone-700">{plan.exercise}</span>
-                {plan.sets && <span className="text-sm text-stone-400">{plan.sets}组×{plan.reps}</span>}
-                <button onClick={() => supabase.from('workout_plans').delete().eq('id', plan.id).then(() => loadData())} className="text-stone-400 hover:text-rose-500">
+              <div key={plan.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'var(--bg-sidebar)', borderRadius: '10px' }}>
+                <span className="badge badge-amber">周{plan.day}</span>
+                <span style={{ flex: 1, fontFamily: 'var(--font-ui)', fontSize: '14px', color: 'var(--text-dark)' }}>{plan.exercise}</span>
+                {plan.sets && (
+                  <span style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--text-light)' }}>
+                    {plan.sets}组 × {plan.reps}次
+                  </span>
+                )}
+                <button
+                  onClick={() => supabase.from('workout_plans').delete().eq('id', plan.id).then(() => loadData())}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-light)', transition: 'color 0.15s' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent-pink)' }}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-light)')}
+                >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             ))}
-            <div className="flex gap-2">
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
               <input
                 type="text"
                 placeholder="添加运动项目..."
-                className="flex-1 px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                className="form-input flex-1"
               />
-              <button className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+              <button className="btn-primary">
                 添加
               </button>
             </div>
@@ -229,8 +280,14 @@ export default function Fitness() {
       )}
 
       {error && (
-        <div className="p-4 bg-rose-50 text-rose-600 rounded-lg text-center">
-          {error} - <button onClick={loadData} className="underline">重试</button>
+        <div style={{ padding: '16px', background: 'var(--color-accent-pink-light)', borderRadius: '12px', textAlign: 'center', fontFamily: 'var(--font-ui)', fontSize: '14px', color: '#B06868' }}>
+          {error} -{' '}
+          <button
+            onClick={loadData}
+            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
+          >
+            重试
+          </button>
         </div>
       )}
     </div>

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, ensureAnonymousLogin } from '../lib/supabase'
 import Card from '../components/Card'
-import { addDays, format } from 'date-fns'
+import { TrendingUp, TrendingDown, Camera, Plus, Trash2, ShoppingBag } from 'lucide-react'
+import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { TrendingUp, TrendingDown, Camera, Plus, Trash2 } from 'lucide-react'
+import { recognizeImage } from '../utils/recognize'
 
 interface Expense {
   id?: string
@@ -27,10 +28,12 @@ export default function Finance() {
     date: format(new Date(), 'yyyy-MM-dd'),
   })
   const [error, setError] = useState<string | null>(null)
+  const [recognizing, setRecognizing] = useState(false)
 
   const categories = ['餐饮', '交通', '购物', '娱乐', '医疗', '教育', '住房', '收入', '其他']
 
   useEffect(() => {
+    ensureAnonymousLogin()
     loadExpenses()
   }, [])
 
@@ -54,6 +57,7 @@ export default function Finance() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    await ensureAnonymousLogin()
     
     const newExpense: Expense = {
       ...formData,
@@ -62,7 +66,8 @@ export default function Finance() {
 
     const { error } = await supabase.from('expenses').insert([newExpense])
     if (error) {
-      setError('添加失败，请重试')
+      console.error('插入错误详情:', error)
+      setError(`添加失败: ${error.message}，请重试`)
       return
     }
 
@@ -86,76 +91,177 @@ export default function Finance() {
     setExpenses(expenses.filter(e => e.id !== id))
   }
 
+  async function handleImageRecognition(inputType: 'camera' | 'upload') {
+    setRecognizing(true)
+    try {
+      let imageBase64: string
+      
+      if (inputType === 'camera') {
+        const cameraInput = document.createElement('input')
+        cameraInput.type = 'file'
+        cameraInput.accept = 'image/*'
+        cameraInput.capture = 'environment'
+        cameraInput.onchange = async (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0]
+          if (file) {
+            imageBase64 = await readFileAsBase64(file)
+            await processImage(imageBase64)
+          }
+        }
+        cameraInput.click()
+      } else {
+        const fileInput = document.createElement('input')
+        fileInput.type = 'file'
+        fileInput.accept = 'image/*'
+        fileInput.onchange = async (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0]
+          if (file) {
+            imageBase64 = await readFileAsBase64(file)
+            await processImage(imageBase64)
+          }
+        }
+        fileInput.click()
+      }
+    } catch (err) {
+      console.error('识别失败:', err)
+      setError('识图失败，请重试')
+    } finally {
+      setRecognizing(false)
+    }
+  }
+
+  function readFileAsBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
+  async function processImage(base64: string) {
+    try {
+      const result = await recognizeImage(base64)
+      if (result?.data?.choices?.[0]?.message?.content) {
+        const text = result.data.choices[0].message.content
+        const amountMatch = text.match(/金额[:：]?\s*([\d.]+)/)
+        const categoryMatch = text.match(/分类[:：]?\s*(\w+)/)
+        
+        if (amountMatch) {
+          setFormData({
+            ...formData,
+            amount: amountMatch[1],
+          })
+          if (categoryMatch && categories.includes(categoryMatch[1])) {
+            setFormData({
+              ...formData,
+              amount: amountMatch[1],
+              category: categoryMatch[1],
+            })
+          }
+        }
+      }
+    } catch (err) {
+      console.error('AI识别失败:', err)
+    }
+  }
+
   const todayExpenses = expenses
     .filter(e => e.type === 'expense' && e.date === format(new Date(), 'yyyy-MM-dd'))
-    .reduce((sum, e) => sum + e.amount, 0)
+    .reduce((sum: number, e: { amount: number }) => sum + e.amount, 0)
   
   const todayIncome = expenses
     .filter(e => e.type === 'income' && e.date === format(new Date(), 'yyyy-MM-dd'))
-    .reduce((sum, e) => sum + e.amount, 0)
+    .reduce((sum: number, e: { amount: number }) => sum + e.amount, 0)
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-stone-400">加载中...</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ fontFamily: 'var(--font-ui)', fontSize: '14px', color: 'var(--text-light)' }}>加载中...</div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-stone-700">记账理财</h1>
+        <div>
+          <h1 className="section-title">记账理财</h1>
+          <p className="section-subtitle" style={{ marginBottom: 0 }}>管理你的收支，记录每一笔开销</p>
+        </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors"
+          className="btn-primary"
         >
           <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">记一笔</span>
+          <span>记一笔</span>
         </button>
       </div>
 
-      {/* 收支卡片 */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="app-card p-4 bg-gradient-to-br from-rose-50 to-rose-100/50">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingDown className="w-5 h-5 text-rose-500" />
-            <span className="text-sm text-stone-500">今日支出</span>
+      {/* Stats */}
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+        <div className="stat-card" style={{ borderTop: '3px solid var(--color-accent-pink)' }}>
+          <p className="stat-label">今日支出</p>
+          <div className="stat-value" style={{ color: 'var(--color-accent-pink)' }}>
+            ¥{todayExpenses.toFixed(2)}
           </div>
-          <p className="text-2xl font-semibold text-rose-600">¥{todayExpenses.toFixed(2)}</p>
         </div>
-        <div className="app-card p-4 bg-gradient-to-br from-emerald-50 to-emerald-100/50">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-5 h-5 text-emerald-500" />
-            <span className="text-sm text-stone-500">今日收入</span>
+        <div className="stat-card" style={{ borderTop: '3px solid var(--color-success)' }}>
+          <p className="stat-label">今日收入</p>
+          <div className="stat-value" style={{ color: 'var(--color-success)' }}>
+            ¥{todayIncome.toFixed(2)}
           </div>
-          <p className="text-2xl font-semibold text-emerald-600">¥{todayIncome.toFixed(2)}</p>
         </div>
       </div>
 
-      {/* 添加表单 */}
+      {/* Add Form */}
       {showForm && (
-        <Card title="记一笔">
+        <Card title="记一笔" subtitle="填写收支信息">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Image Recognition Buttons */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleImageRecognition('camera')}
+                disabled={recognizing}
+                className="btn-secondary"
+                style={{ borderColor: 'var(--color-accent-blue)', color: 'var(--color-accent-blue)' }}
+              >
+                <Camera className="w-4 h-4" />
+                <span>拍照识图</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleImageRecognition('upload')}
+                disabled={recognizing}
+                className="btn-secondary"
+                style={{ borderColor: 'var(--color-accent-pink)', color: 'var(--color-accent-pink)' }}
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span>上传图片</span>
+              </button>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-stone-600 mb-1">金额</label>
+                <label style={{ display: 'block', fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--text-mid)', marginBottom: '6px' }}>金额</label>
                 <input
                   type="number"
                   step="0.01"
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                  className="form-input"
                   placeholder="0.00"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-stone-600 mb-1">类型</label>
+                <label style={{ display: 'block', fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--text-mid)', marginBottom: '6px' }}>类型</label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense' })}
-                  className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                  className="form-input"
                 >
                   <option value="expense">支出</option>
                   <option value="income">收入</option>
@@ -164,18 +270,15 @@ export default function Finance() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-stone-600 mb-1">分类</label>
+              <label style={{ display: 'block', fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--text-mid)', marginBottom: '6px' }}>分类</label>
               <div className="flex flex-wrap gap-2">
                 {categories.map(cat => (
                   <button
                     key={cat}
                     type="button"
                     onClick={() => setFormData({ ...formData, category: cat })}
-                    className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                      formData.category === cat
-                        ? 'bg-rose-500 text-white'
-                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                    }`}
+                    className={`badge ${formData.category === cat ? 'badge-pink' : ''}`}
+                    style={formData.category === cat ? { background: 'var(--color-accent-pink-light)', color: '#B06868' } : { background: 'var(--bg-sidebar)', color: 'var(--text-mid)' }}
                   >
                     {cat}
                   </button>
@@ -184,37 +287,34 @@ export default function Finance() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-stone-600 mb-1">备注</label>
+              <label style={{ display: 'block', fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--text-mid)', marginBottom: '6px' }}>备注</label>
               <input
                 type="text"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                className="form-input"
                 placeholder="添加备注..."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-stone-600 mb-1">日期</label>
+              <label style={{ display: 'block', fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--text-mid)', marginBottom: '6px' }}>日期</label>
               <input
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                className="form-input"
               />
             </div>
 
             <div className="flex gap-3">
-              <button
-                type="submit"
-                className="flex-1 px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors"
-              >
+              <button type="submit" className="btn-primary" style={{ flex: 1 }}>
                 确认
               </button>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200 transition-colors"
+                className="btn-secondary"
               >
                 取消
               </button>
@@ -223,37 +323,32 @@ export default function Finance() {
         </Card>
       )}
 
-      {/* 记账列表 */}
-      <Card title="最近记录">
+      {/* Expense List */}
+      <Card title="最近记录" subtitle="近10笔交易">
         {expenses.length === 0 ? (
-          <p className="text-center text-stone-400 py-8">还没有记录，点击"记一笔"开始记账吧</p>
+          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-light)', fontFamily: 'var(--font-ui)', fontSize: '13px' }}>
+            还没有记录，点击"记一笔"开始记账吧
+          </div>
         ) : (
-          <div className="space-y-2">
+          <div>
             {expenses.slice(0, 10).map((expense) => (
-              <div
-                key={expense.id}
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-stone-50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    expense.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
-                  }`}>
-                    {expense.type === 'income' ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+              <div key={expense.id} className="expense-row">
+                <div className="expense-left">
+                  <div className={`expense-icon ${expense.type}`}>
+                    {expense.type === 'income' ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                   </div>
                   <div>
-                    <p className="font-medium text-stone-700">{expense.category}</p>
-                    <p className="text-sm text-stone-400">{expense.description || expense.date}</p>
+                    <div className="expense-name">{expense.category}</div>
+                    <div className="expense-desc">{expense.description || expense.date}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={`font-semibold ${
-                    expense.type === 'income' ? 'text-emerald-600' : 'text-rose-600'
-                  }`}>
+                  <span className={`expense-amount ${expense.type}`}>
                     {expense.type === 'income' ? '+' : '-'}¥{expense.amount.toFixed(2)}
                   </span>
                   <button
-                    onClick={() => handleDelete(expense.id!)}
-                    className="p-1 text-stone-400 hover:text-rose-500 transition-colors"
+                    onClick={() => expense.id && handleDelete(expense.id)}
+                    className="p-1 text-[var(--text-light)] hover:text-[var(--color-accent-pink)] transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -265,8 +360,8 @@ export default function Finance() {
       </Card>
 
       {error && (
-        <div className="p-4 bg-rose-50 text-rose-600 rounded-lg text-center">
-          {error} - <button onClick={loadExpenses} className="underline">重试</button>
+        <div style={{ padding: '12px 16px', background: 'var(--color-accent-pink-light)', borderRadius: '10px', fontFamily: 'var(--font-ui)', fontSize: '13px', color: '#B06868', textAlign: 'center' }}>
+          {error} - <button onClick={loadExpenses} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}>重试</button>
         </div>
       )}
     </div>

@@ -1,0 +1,29 @@
+name: 全能工作台爬虫
+on:
+  schedule:
+    # 新闻：每日 6:00, 12:00, 17:00
+    - cron: '0 6,12,17 * * *'
+    # 诗经/名句/评论：每日 5:00
+    - cron: '0 5 * * *'
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install httpx parsel
+      
+      - name: Run crawler
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python crawlers/crawler.py

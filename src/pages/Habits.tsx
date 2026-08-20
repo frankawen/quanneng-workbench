@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, ensureAnonymousLogin } from '../lib/supabase'
 import Card from '../components/Card'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
@@ -22,6 +22,7 @@ export default function Habits() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    ensureAnonymousLogin()
     loadHabits()
   }, [])
 
@@ -44,6 +45,7 @@ export default function Habits() {
 
   async function handleAddHabit() {
     if (!newHabit.name.trim()) return
+    await ensureAnonymousLogin()
 
     const { error } = await supabase.from('habits').insert([{
       name: newHabit.name,
@@ -77,7 +79,6 @@ export default function Habits() {
     const existingRecord = habit.records?.find(r => r.date === date)
     
     if (existingRecord) {
-      // 取消打卡
       const { error } = await supabase.from('habit_records').delete().eq('id', existingRecord.id)
       if (error) {
         setError('操作失败，请重试')
@@ -89,7 +90,6 @@ export default function Habits() {
           : h
       ))
     } else {
-      // 打卡
       const { error } = await supabase.from('habit_records').insert([{
         habit_id: habitId,
         date,
@@ -107,7 +107,6 @@ export default function Habits() {
     }
   }
 
-  // 生成热力图日期
   const monthStart = startOfMonth(new Date(currentMonth))
   const monthEnd = endOfMonth(new Date(currentMonth))
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
@@ -115,111 +114,82 @@ export default function Habits() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-stone-400">加载中...</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ fontFamily: 'var(--font-ui)', fontSize: '14px', color: 'var(--text-light)' }}>加载中...</div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-stone-700">习惯健康</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition-colors"
-        >
+        <div>
+          <h1 className="section-title">习惯健康</h1>
+          <p className="section-subtitle" style={{ marginBottom: 0 }}>培养好习惯，遇见更好的自己</p>
+        </div>
+        <button onClick={() => setShowForm(!showForm)} className="btn-primary">
           <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">新增习惯</span>
+          <span>新增习惯</span>
         </button>
       </div>
 
-      {/* 添加习惯表单 */}
+      {/* Add Form */}
       {showForm && (
-        <Card title="新增习惯">
+        <Card title="新增习惯" subtitle="设定你的每日目标">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-stone-600 mb-1">习惯名称</label>
+              <label style={{ display: 'block', fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--text-mid)', marginBottom: '6px' }}>习惯名称</label>
               <input
                 type="text"
                 value={newHabit.name}
                 onChange={(e) => setNewHabit({ ...newHabit, name: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="form-input"
                 placeholder="例如：每天喝水8杯"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-stone-600 mb-1">打卡方式</label>
+              <label style={{ display: 'block', fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--text-mid)', marginBottom: '6px' }}>打卡方式</label>
               <div className="flex gap-2">
                 {(['checkbox', 'counter', 'value'] as const).map(type => (
                   <button
                     key={type}
                     type="button"
                     onClick={() => setNewHabit({ ...newHabit, type })}
-                    className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                      newHabit.type === type
-                        ? 'bg-pink-500 text-white'
-                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                    }`}
+                    className={`badge ${newHabit.type === type ? 'badge-green' : ''}`}
+                    style={newHabit.type === type ? { background: 'var(--color-success-light)', color: '#4A7060' } : { background: 'var(--bg-sidebar)', color: 'var(--text-mid)' }}
                   >
                     {type === 'checkbox' ? '✓ 勾选' : type === 'counter' ? '数 计数' : '值 数值'}
                   </button>
                 ))}
               </div>
             </div>
-            {(newHabit.type === 'counter' || newHabit.type === 'value') && (
-              <div>
-                <label className="block text-sm font-medium text-stone-600 mb-1">目标值</label>
-                <input
-                  type="number"
-                  value={newHabit.target}
-                  onChange={(e) => setNewHabit({ ...newHabit, target: parseInt(e.target.value) || 1 })}
-                  className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-pink-300"
-                />
-              </div>
-            )}
-            <div className="flex gap-3">
-              <button
-                onClick={handleAddHabit}
-                className="flex-1 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors"
-              >
-                确认添加
-              </button>
-              <button
-                onClick={() => setShowForm(false)}
-                className="px-4 py-2 bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200 transition-colors"
-              >
-                取消
-              </button>
+            <div className="flex gap-3 mt-4">
+              <button onClick={handleAddHabit} className="btn-primary" style={{ flex: 1 }}>确认添加</button>
+              <button onClick={() => setShowForm(false)} className="btn-secondary">取消</button>
             </div>
           </div>
         </Card>
       )}
 
-      {/* 习惯列表 */}
+      {/* Habits List */}
       <div className="space-y-4">
         {habits.map(habit => (
           <Card
             key={habit.id}
             title={habit.name}
             subtitle={`共 ${habit.records?.length || 0} 次打卡`}
-            className="relative"
+            action={
+              <button onClick={() => habit.id && handleDeleteHabit(habit.id)} className="p-1 text-[var(--text-light)] hover:text-[var(--color-accent-pink)] transition-colors">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            }
           >
-            <button
-              onClick={() => habit.id && handleDeleteHabit(habit.id)}
-              className="absolute top-4 right-4 p-1 text-stone-400 hover:text-rose-500 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-            
             <div className="flex gap-2 mt-2">
               <button
                 onClick={() => habit.id && handleToggleHabit(habit.id, format(new Date(), 'yyyy-MM-dd'))}
-                className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                  habit.records?.some(r => r.date === format(new Date(), 'yyyy-MM-dd') && r.value > 0)
-                    ? 'bg-pink-500 text-white'
-                    : 'bg-pink-100 text-pink-600 hover:bg-pink-200'
-                }`}
+                className={`btn-secondary ${habit.records?.some(r => r.date === format(new Date(), 'yyyy-MM-dd') && r.value > 0) ? 'active' : ''}`}
+                style={habit.records?.some(r => r.date === format(new Date(), 'yyyy-MM-dd') && r.value > 0) ? { background: 'var(--color-success-light)', borderColor: 'var(--color-success)', color: 'var(--color-success)' } : {}}
               >
                 <Check className="w-4 h-4 inline mr-1" />
                 今日已打卡
@@ -229,8 +199,8 @@ export default function Habits() {
         ))}
       </div>
 
-      {/* 30天热力图 */}
-      <Card title="打卡热力图">
+      {/* Heatmap */}
+      <Card title="打卡热力图" subtitle={`${currentMonth} 月`}>
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => {
@@ -238,26 +208,28 @@ export default function Habits() {
               prev.setMonth(prev.getMonth() - 1)
               setCurrentMonth(format(prev, 'yyyy-MM'))
             }}
-            className="px-3 py-1 bg-stone-100 rounded-lg hover:bg-stone-200 transition-colors"
+            className="btn-secondary"
+            style={{ padding: '6px 12px' }}
           >
             ←
           </button>
-          <span className="font-medium text-stone-700">{currentMonth}</span>
+          <span style={{ fontFamily: 'var(--font-ui)', fontSize: '13px', color: 'var(--text-mid)' }}>{currentMonth}</span>
           <button
             onClick={() => {
               const next = new Date(currentMonth)
               next.setMonth(next.getMonth() + 1)
               setCurrentMonth(format(next, 'yyyy-MM'))
             }}
-            className="px-3 py-1 bg-stone-100 rounded-lg hover:bg-stone-200 transition-colors"
+            className="btn-secondary"
+            style={{ padding: '6px 12px' }}
           >
             →
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
           {weekDays.map(day => (
-            <div key={day} className="text-center text-xs text-stone-400 py-1">
+            <div key={day} style={{ textAlign: 'center', fontFamily: 'var(--font-ui)', fontSize: '11px', color: 'var(--text-light)', padding: '4px' }}>
               {day}
             </div>
           ))}
@@ -269,13 +241,17 @@ export default function Habits() {
             return (
               <div
                 key={idx}
-                className={`aspect-square rounded flex items-center justify-center text-xs ${
-                  hasRecord
-                    ? 'bg-pink-500 text-white'
-                    : format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-                    ? 'bg-stone-200 text-stone-600'
-                    : 'bg-stone-100 text-stone-400'
-                }`}
+                style={{
+                  aspectRatio: '1',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '11px',
+                  fontFamily: 'var(--font-ui)',
+                  backgroundColor: hasRecord ? 'var(--color-success)' : format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'var(--bg-sidebar)' : 'var(--bg-sidebar)',
+                  color: hasRecord ? 'white' : 'var(--text-mid)',
+                }}
               >
                 {format(day, 'd')}
               </div>
@@ -285,8 +261,8 @@ export default function Habits() {
       </Card>
 
       {error && (
-        <div className="p-4 bg-rose-50 text-rose-600 rounded-lg text-center">
-          {error} - <button onClick={loadHabits} className="underline">重试</button>
+        <div style={{ padding: '12px 16px', background: 'var(--color-accent-pink-light)', borderRadius: '10px', fontFamily: 'var(--font-ui)', fontSize: '13px', color: '#B06868', textAlign: 'center' }}>
+          {error} - <button onClick={loadHabits} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}>重试</button>
         </div>
       )}
     </div>

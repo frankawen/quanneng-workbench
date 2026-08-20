@@ -5,7 +5,7 @@ import {
   Heart, 
   Activity, 
   ShoppingBag, 
-  BookOpen 
+  BookOpen
 } from 'lucide-react'
 
 const navItems = [
@@ -19,66 +19,81 @@ const navItems = [
 
 export default function Layout() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#faf8f5] to-[#f5f0eb]">
-      {/* 顶部导航 */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-white/50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-stone-700 tracking-tight">
-            全能工作台
-          </h1>
-          <nav className="hidden md:flex items-center gap-1">
+    <div className="page-layout">
+      {/* ── Sidebar ── */}
+      <aside className="sidebar-card hidden md:flex md:w-56 md:flex-shrink-0">
+        <div>
+          {/* Logo */}
+          <div className="sidebar-logo">
+            <div className="sidebar-logo-text">全能工作台</div>
+            <div className="sidebar-logo-sub">Life Dashboard</div>
+          </div>
+
+          {/* Nav Items */}
+          <nav className="flex flex-col gap-1 mt-4">
             {navItems.map((item) => {
               const Icon = item.icon
               return (
                 <NavLink
                   key={item.path}
                   to={item.path}
+                  end={item.path === '/'}
                   className={({ isActive }) =>
-                    `flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      isActive
-                        ? 'bg-rose-100 text-rose-600 shadow-sm'
-                        : 'text-stone-500 hover:bg-stone-100 hover:text-stone-700'
-                    }`
+                    `nav-item ${isActive ? 'active' : ''}`
                   }
                 >
-                  <Icon className="w-4 h-4" />
-                  {item.label}
+                  <Icon />
+                  <span>{item.label}</span>
                 </NavLink>
               )
             })}
           </nav>
         </div>
-      </header>
 
-      {/* 移动端底部导航 */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-stone-200 z-50">
-        <div className="flex justify-around py-2">
-          {navItems.map((item) => {
-            const Icon = item.icon
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) =>
-                  `flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200 ${
-                    isActive
-                      ? 'text-rose-500'
-                      : 'text-stone-400'
-                  }`
-                }
-              >
-                <Icon className="w-5 h-5" />
-                <span className="text-xs">{item.label}</span>
-              </NavLink>
-            )
-          })}
+        {/* Footer */}
+        <div className="mt-auto px-4 py-4 text-center">
+          <p className="text-xs" style={{ color: 'var(--text-light)', fontFamily: 'var(--font-ui)' }}>
+            数据存于云端 · 多端同步
+          </p>
         </div>
-      </nav>
+      </aside>
 
-      {/* 主内容区 */}
-      <main className="max-w-7xl mx-auto px-4 py-6 pb-24 md:pb-6">
-        <Outlet />
-      </main>
+      {/* ── Main Content ── */}
+      <div className="flex-1 min-w-0">
+        {/* Mobile Header */}
+        <header className="md:hidden sticky top-0 z-50 bg-[#FAF7F2]/90 backdrop-blur-md border-b border-[#E8E0D5] px-4 py-3 flex items-center justify-between">
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600, color: 'var(--text-dark)' }}>
+            全能工作台
+          </span>
+          <span style={{ fontFamily: 'var(--font-ui)', fontSize: '11px', color: 'var(--text-light)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            Life Dashboard
+          </span>
+        </header>
+
+        <main className="page-content">
+          <Outlet />
+        </main>
+      </div>
+
+      {/* ── Mobile Bottom Nav ── */}
+      <nav className="mobile-nav md:hidden">
+        {navItems.map((item) => {
+          const Icon = item.icon
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/'}
+              className={({ isActive }) =>
+                `mobile-nav-item ${isActive ? 'active' : ''}`
+              }
+            >
+              <Icon />
+              <span>{item.label}</span>
+            </NavLink>
+          )
+        })}
+      </nav>
     </div>
   )
 }

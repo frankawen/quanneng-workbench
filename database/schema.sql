@@ -1,159 +1,129 @@
--- 全能工作台 Supabase Schema
--- 数据库：NoSQL (Supabase PostgreSQL)
+-- ============================================================
+-- 全能工作台数据库 Schema
+-- 在 Supabase Dashboard → SQL Editor 中执行
+-- ============================================================
 
--- 1. 记账理财表
-CREATE TABLE expenses (
+-- 1. expenses（记账）
+CREATE TABLE IF NOT EXISTS expenses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  amount DECIMAL(10, 2) NOT NULL,
-  type VARCHAR(10) NOT NULL CHECK (type IN ('income', 'expense')),
-  category VARCHAR(50) NOT NULL,
-  description TEXT,
-  date DATE NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  type TEXT NOT NULL,           -- 支出/收入
+  amount DECIMAL(10,2) NOT NULL,
+  category TEXT NOT NULL,       -- 餐饮/交通/购物等
+  date TEXT NOT NULL,           -- YYYY-MM-DD
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE expenses IS '收支记录';
-
--- 2. 预算表
-CREATE TABLE budgets (
+-- 2. budgets（预算）
+CREATE TABLE IF NOT EXISTS budgets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id),
-  month VARCHAR(7) NOT NULL, -- '2026-08'
-  total DECIMAL(10, 2) NOT NULL,
-  category_budgets JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, month)
+  month TEXT NOT NULL,          -- YYYY-MM
+  amount DECIMAL(10,2) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 3. 习惯表
-CREATE TABLE habits (
+-- 3. habits（习惯）
+CREATE TABLE IF NOT EXISTS habits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(100) NOT NULL,
-  type VARCHAR(20) NOT NULL CHECK (type IN ('checkbox', 'counter', 'value')),
-  target INTEGER DEFAULT 1,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,           -- check/count/value
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE habits IS '习惯列表';
-
--- 4. 习惯打卡记录
-CREATE TABLE habit_records (
+-- 4. habit_records（习惯打卡记录）
+CREATE TABLE IF NOT EXISTS habit_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  habit_id UUID NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
-  date DATE NOT NULL,
-  value INTEGER NOT NULL DEFAULT 1,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(habit_id, date)
+  habit_id UUID REFERENCES habits(id) ON DELETE CASCADE,
+  date TEXT NOT NULL,           -- YYYY-MM-DD
+  checked BOOLEAN DEFAULT false,
+  count INTEGER DEFAULT 0,
+  value DECIMAL(10,2),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE habit_records IS '习惯打卡记录';
-
--- 5. 身体数据记录
-CREATE TABLE body_records (
+-- 5. body_records（体重记录）
+CREATE TABLE IF NOT EXISTS body_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  weight DECIMAL(5, 2) NOT NULL,
-  body_fat DECIMAL(5, 2),
-  bmi DECIMAL(5, 2),
-  notes TEXT,
-  date DATE NOT NULL DEFAULT CURRENT_DATE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  date TEXT NOT NULL,
+  weight DECIMAL(5,2) NOT NULL,
+  body_fat DECIMAL(5,2),
+  height DECIMAL(5,2),
+  bmi DECIMAL(5,2),
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE body_records IS '体重体脂记录';
-
--- 6. 健身计划
-CREATE TABLE workout_plans (
+-- 6. workout_plans（周计划）
+CREATE TABLE IF NOT EXISTS workout_plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  week VARCHAR(10) NOT NULL,
-  day INTEGER NOT NULL,
-  exercise VARCHAR(200) NOT NULL,
+  week TEXT NOT NULL,           -- YYYY-Www
+  day INTEGER NOT NULL,         -- 1-7
+  exercise TEXT NOT NULL,
   sets INTEGER,
   reps INTEGER,
-  duration INTEGER, -- 分钟
-  calories_burned INTEGER,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  duration INTEGER,             -- 分钟
+  calories_burned DECIMAL(8,2),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE workout_plans IS '周健身计划';
-
--- 7. 待买清单
-CREATE TABLE wishlist (
+-- 7. wishlist（待买清单）
+CREATE TABLE IF NOT EXISTS wishlist (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(200) NOT NULL,
-  price DECIMAL(10, 2),
-  urgency VARCHAR(10) NOT NULL CHECK (urgency IN ('high', 'medium', 'low')),
-  purchased BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  name TEXT NOT NULL,
+  price DECIMAL(10,2),
+  priority TEXT NOT NULL DEFAULT '中',  -- 高/中/低
+  category TEXT,
+  note TEXT,
+  purchased BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE wishlist IS '待买清单';
-
--- 8. 新闻表
-CREATE TABLE news (
+-- 8. news（新闻）
+CREATE TABLE IF NOT EXISTS news (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  title VARCHAR(500) NOT NULL,
-  source VARCHAR(100),
-  url TEXT NOT NULL,
-  date DATE NOT NULL,
-  category VARCHAR(50),
-  crawled_at TIMESTAMPTZ DEFAULT NOW()
+  title TEXT NOT NULL,
+  source TEXT,
+  url TEXT,
+  date TEXT,
+  category TEXT,
+  crawled_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE news IS '界面快报';
-
--- 9. 诗经表
-CREATE TABLE shijing (
+-- 9. shijing（诗经）
+CREATE TABLE IF NOT EXISTS shijing (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  title VARCHAR(200) NOT NULL,
-  section VARCHAR(50) NOT NULL, -- 国风/小雅/大雅/颂
+  title TEXT NOT NULL,
+  section TEXT,                 -- 国风/小雅/大雅/颂
   content TEXT NOT NULL,
-  translation TEXT,
-  notes TEXT,
-  appreciation TEXT,
-  crawled_at TIMESTAMPTZ DEFAULT NOW()
+  url TEXT,
+  crawled_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE shijing IS '诗经全文';
-
--- 10. 名句表
-CREATE TABLE quotes (
+-- 10. quotes（名句）
+CREATE TABLE IF NOT EXISTS quotes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   quote TEXT NOT NULL,
-  author VARCHAR(100),
-  source VARCHAR(200),
-  translation TEXT,
-  notes TEXT,
-  appreciation TEXT,
-  crawled_at TIMESTAMPTZ DEFAULT NOW()
+  author TEXT,
+  source TEXT,
+  crawled_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE quotes IS '历代名句';
-
--- 11. 评论表（人民日报05版）
-CREATE TABLE comments (
+-- 11. comments（评论）
+CREATE TABLE IF NOT EXISTS comments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  title VARCHAR(500) NOT NULL,
-  subtitle VARCHAR(500),
-  author VARCHAR(100),
-  date DATE NOT NULL,
-  content TEXT,
-  type VARCHAR(50), -- 人民时评/纵深/现场评论
-  url TEXT NOT NULL,
-  crawled_at TIMESTAMPTZ DEFAULT NOW()
+  title TEXT NOT NULL,
+  subtitle TEXT,
+  author TEXT,
+  date TEXT,
+  type TEXT,                    -- 人民时评/纵深/评论
+  url TEXT,
+  crawled_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE comments IS '人民日报评论';
-
--- 创建索引
-CREATE INDEX idx_expenses_date ON expenses(date);
-CREATE INDEX idx_expenses_type ON expenses(type);
-CREATE INDEX idx_habit_records_date ON habit_records(date);
-CREATE INDEX idx_body_records_date ON body_records(date);
-CREATE INDEX idx_news_date ON news(date);
-CREATE INDEX idx_comments_date ON comments(date);
-CREATE INDEX idx_quotes_crawled ON quotes(crawled_at DESC);
-
--- 启用 RLS (Row Level Security)
+-- ============================================================
+-- Row Level Security (RLS) 策略
+-- ============================================================
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE budgets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE habits ENABLE ROW LEVEL SECURITY;
@@ -166,22 +136,32 @@ ALTER TABLE shijing ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 
--- 公共读取策略
-CREATE POLICY "允许匿名读取" ON expenses FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "允许匿名读取" ON habits FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "允许匿名读取" ON habit_records FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "允许匿名读取" ON body_records FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "允许匿名读取" ON wishlist FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "允许匿名读取" ON news FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "允许匿名读取" ON shijing FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "允许匿名读取" ON quotes FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "允许匿名读取" ON comments FOR SELECT TO anon, authenticated USING (true);
+-- 公开读取（任何人可查）
+CREATE POLICY "public_read" ON * FOR SELECT USING (true);
 
--- 写入策略（仅登录用户）
-CREATE POLICY "允许登录用户写入" ON expenses FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY "允许登录用户写入" ON habits FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY "允许登录用户写入" ON habit_records FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY "允许登录用户写入" ON body_records FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY "允许登录用户写入" ON wishlist FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY "允许登录用户写入" ON workout_plans FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY "允许登录用户写入" ON budgets FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+-- 允许写入（需要认证，但匿名登录也可）
+CREATE POLICY "allow_insert" ON * FOR INSERT WITH CHECK (true);
+CREATE POLICY "allow_update" ON * FOR UPDATE USING (true);
+CREATE POLICY "allow_delete" ON * FOR DELETE USING (true);
+
+-- ============================================================
+-- 索引优化
+-- ============================================================
+CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
+CREATE INDEX IF NOT EXISTS idx_expenses_type ON expenses(type);
+CREATE INDEX IF NOT EXISTS idx_habit_records_date ON habit_records(date);
+CREATE INDEX IF NOT EXISTS idx_habit_records_habit ON habit_records(habit_id);
+CREATE INDEX IF NOT EXISTS idx_body_records_date ON body_records(date);
+CREATE INDEX IF NOT EXISTS idx_wishlist_purchased ON wishlist(purchased);
+CREATE INDEX IF NOT EXISTS idx_news_crawled ON news(crawled_at DESC);
+CREATE INDEX IF NOT EXISTS idx_quotes_crawled ON quotes(crawled_at DESC);
+CREATE INDEX IF NOT EXISTS idx_comments_crawled ON comments(crawled_at DESC);
+
+-- ============================================================
+-- 示例数据（可选，首次使用时删除）
+-- ============================================================
+-- INSERT INTO expenses (type, amount, category, date, note) VALUES
+--   ('支出', 35.5, '餐饮', '2025-08-20', '午餐'),
+--   ('收入', 8000, '工资', '2025-08-01', '工资');
+-- INSERT INTO habits (name, type) VALUES ('早起', 'check'), ('喝水', 'count');
+-- INSERT INTO body_records (date, weight, height, bmi) VALUES ('2025-08-20', 70.5, 175, 23.0);
