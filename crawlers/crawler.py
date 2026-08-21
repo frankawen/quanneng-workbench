@@ -171,10 +171,10 @@ def fetch_news():
         have = existing_keys('news', 'url', [i['url'] for i in all_items])
         new = [i for i in all_items if i['url'] not in have]
         api_post('news', new)
-        # 清理 7 天前的旧新闻，防止无限累积
+        # 清理 7 天前的旧新闻，防止无限累积（PostgREST DELETE 需 column=op.value 格式）
         try:
             cutoff = (datetime.now().date() - timedelta(days=7)).isoformat()
-            r = httpx.delete(f'{BASE_URL}/news?date.lt.{cutoff}',
+            r = httpx.delete(f'{BASE_URL}/news?date=lt.{cutoff}',
                              headers=HEADERS, timeout=20)
             print(f'  · 清理 {cutoff} 前旧新闻: {r.status_code}')
         except Exception as e:
