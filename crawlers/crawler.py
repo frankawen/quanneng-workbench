@@ -5,7 +5,7 @@
   新闻   -> 界面新闻快报四板块    lists/1324kb(热点) / 1325kb(公司) / 主页混合(财经/时事)
   诗经   -> 古文岛诗经            guwendao.net
   名句   -> 古诗文网名句          gushiwen.cn（含译文/注释/赏析）
-  评论   -> 人民网观点频道        opinion.people.com.cn（人民日报评论）
+  评论   -> 人民日报电子版当日第5版  paper.people.com.cn/rmrb/pc/layout/.../node_05.html
 定时任务：每日 6/12/17 点新闻，5 点诗经/名句/评论
 """
 
@@ -14,6 +14,7 @@ from parsel import Selector
 import json
 import re
 from datetime import datetime, timedelta
+from urllib.parse import urljoin
 import os
 
 SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://wentfvkdfecrfelgmdix.supabase.co')
@@ -285,39 +286,47 @@ def fetch_quotes():
 
 
 # ============================================================
-# 评论 — 人民网观点频道（人民日报评论）
+# 评论 — 人民日报电子版当日第5版（评论版）
+# 版面页：https://paper.people.com.cn/rmrb/pc/layout/{YYYYMM}/{DD}/node_05.html
+# li 结构：<li><span>·</span><a href="../../../content/...">{标题}</a></li>
 # ============================================================
 def fetch_comments():
-    print('[评论] 抓取人民网观点频道...')
+    print('[评论] 抓取人民日报电子版当日第5版（评论）...')
     try:
-        resp = httpx.get('http://opinion.people.com.cn/', headers=UA, timeout=30, follow_redirects=True)
+        today = datetime.now()
+        page_url = f'https://paper.people.com.cn/rmrb/pc/layout/{today.strftime("%Y%m")}/{today.strftime("%d")}/node_05.html'
+        resp = httpx.get(page_url, headers=UA, timeout=30, follow_redirects=True)
+        if resp.status_code != 200:
+            print(f'  ! 版面页 {page_url} 返回 {resp.status_code}')
+            return
         sel = Selector(text=resp.text)
         items, seen = [], set()
-        for el in sel.css('li'):
-            a = el.css('a').get() or ''
+        for li in sel.css('.news li'):
+            a = li.css('a')
             if not a:
                 continue
-            title = (el.xpath('string(.//a)').get() or '').strip()
-            href = el.css('a::attr(href)').get() or ''
-            if not title or not (6 <= len(title) <= 50) or title in seen:
+            title = (a.css('::text').get() or '').strip()
+            title = ' '.join(title.split())
+            href = a.css('::attr(href)').get() or ''
+            if not title or len(title) < 6 or title in seen:
                 continue
-            # 过滤非评论内容
-            if any(kw in title for kw in ['图片', '视频', '直播', '专题']):
+            # 过滤编辑署名/非文章条目
+            if any(kw in title for kw in ['本版责编', '图片报道', '本版邮箱', '漫画', '广告']):
                 continue
             seen.add(title)
-            url = href if href.startswith('http') else f'http://opinion.people.com.cn{href}'
+            # 相对路径 ../../../content/... 转绝对 URL
+            url = urljoin(page_url, href) if href else ''
             items.append({
                 'title': title,
                 'type': '人民日报·评论',
                 'url': url,
-                'date': datetime.now().strftime('%Y-%m-%d'),
+                'date': today.strftime('%Y-%m-%d'),
                 'author': '',
                 'subtitle': ''
             })
-            if len(items) >= 10:
+            if len(items) >= 8:
                 break
-        # 人民日报评论只保留最新 5 条：先清理旧评论，再写入本次 5 条
-        # 防误删：仅在本次抓到 >=1 条时才清理，避免抓取失败时空表
+        # 只保留最新 5 条：先清理旧评论，再写入本次（防误删：抓到 >=1 条才清）
         if items:
             items = items[:5]
             try:
