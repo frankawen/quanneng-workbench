@@ -61,57 +61,66 @@ def existing_keys(table, col, vals):
 # ============================================================
 # 新闻 — 界面新闻四板块（今日热点/公司头条/财经速览/时事追踪）
 # ============================================================
+# 板块 id 对应关系（来自 jiemian.com 主页导航 li id）：
+#   1324=今日热点  1322=公司头条  1326=财经速览  1325=时事追踪
 NEWS_SECTIONS = {
     '今日热点': 'https://www.jiemian.com/lists/1324kb.html',
-    '公司头条': 'https://www.jiemian.com/lists/1325kb.html',
+    '公司头条': 'https://www.jiemian.com/lists/1322kb.html',
+    '财经速览': 'https://www.jiemian.com/lists/1326kb.html',
+    '时事追踪': 'https://www.jiemian.com/lists/1325kb.html',
 }
 
 def _parse_jiemian_list(url, category, max_items=8):
-    """解析界面新闻列表页，返回 [{title,url,desc,category}]"""
+    """解析界面新闻板块子页。
+    板块子页 li 结构：
+      <li>
+        <div class="columns-right-center__newsflash-item">
+          <div class="columns-right-center__newsflash-content">
+            <h4><a href="/article/{id}.html">{标题}</a></h4>
+            <div class="columns-right-center__newsflash-content__summary">{摘要}</div>
+          </div>
+        </div>
+      </li>
+    返回 [{title,url,summary,category}]，title=纯标题，summary=摘要。
+    """
     items = []
     try:
         resp = httpx.get(url, headers=UA, timeout=30, follow_redirects=True)
         sel = Selector(text=resp.text)
         seen = set()
-        for li in sel.css('.d-list ul li, [class*=newsflash] ul li'):
-            text = li.xpath('string(.)').get() or ''
-            text = ' '.join(text.split())
-            a_tag = li.css('a').get()
-            href = ''
-            if a_tag:
-                # 从 <a> 标签提取 href
-                m = re.search(r'href="([^"]+)"', a_tag)
-                if m:
-                    href = m.group(1)
-
-            # 提取标题和描述：通常格式为 "HH:MM标题描述文字"
-            # 时间开头如 "10:05" 或 "09:48"
-            clean = re.sub(r'^\d{1,2}:\d{2}\s*', '', text).strip()
-            if not clean or len(clean) < 10 or clean in seen:
+        for li in sel.css('.columns-right-center__newsflash-item'):
+            # 链接
+            a = li.css('a[href*="/article/"]')
+            if not a:
                 continue
-            seen.add(clean)
-
-            # 尝试分离标题和描述（第一个句号或逗号后截断作为描述）
-            title = clean
-            desc = ''
-            # 如果文本较长（>40字），前半作标题，后半作描述
-            if len(clean) > 45:
-                for sep in ['。', '，', ',', '.']:
-                    if sep in clean[25:]:
-                        idx = clean.index(sep, 25) + 1
-                        title = clean[:idx].strip()
-                        desc = clean[idx:].strip()
-                        break
-                if not desc:
-                    title = clean[:35].strip()
-                    desc = clean[35:].strip()
-
-            url_full = href if href.startswith('http') else f'https://www.jiemian.com{href}' if href else '#'
-
+            href = a.css('::attr(href)').get() or ''
+            if not href:
+                continue
+            if not href.startswith('http'):
+                href = f'https://www.jiemian.com{href}' if href.startswith('/') else f'https://www.jiemian.com/{href}'
+            if href in seen:
+                continue
+            # 标题：h4 内 a 的文本（li 第一个 article 链接）
+            title = (li.css('h4 a::text').get() or '').strip()
+            title = ' '.join(title.split())
+            if not title or len(title) < 6:
+                # 兜底：取 a 文本
+                title = (a.css('::text').get() or '').strip()
+                title = ' '.join(title.split())
+            if not title or len(title) < 6:
+                continue
+            # 摘要：专门的 .columns-right-center__newsflash-content__summary
+            summary = ''
+            for sn in li.css('.columns-right-center__newsflash-content__summary'):
+                txt = (sn.css('::text').get() or '').strip()
+                if txt and txt != title:
+                    summary = ' '.join(txt.split())
+                    break
+            seen.add(href)
             items.append({
-                'title': title,
-                'url': url_full,
-                'summary': desc[:80] if desc else '',
+                'title': title[:80],          # 标题防御性截断
+                'url': href,
+                'summary': summary[:120],      # 摘要防御性截断
                 'source': '界面新闻',
                 'date': datetime.now().strftime('%Y-%m-%d'),
                 'category': category
@@ -127,45 +136,11 @@ def fetch_news():
     print('[新闻] 抓取界面新闻四板块...')
     all_items = []
 
-    # 各独立板块
+    # 四个板块各自从独立子页抓（已确认 1322/1324/1325/1326kb.html 全部 200）
     for cat, url in NEWS_SECTIONS.items():
         items = _parse_jiemian_list(url, cat, max_items=8)
         print(f'  · {cat}: {len(items)} 条')
         all_items.extend(items)
-
-    # 财经速览/时事追踪从主页滚动快报补充（这两个子页面返回403）
-    try:
-        resp = httpx.get('https://www.jiemian.com/lists/4.html', headers=UA, timeout=30, follow_redirects=True)
-        sel = Selector(text=resp.text)
-        extra_seen = set(i['title'] for i in all_items)
-        extra = []
-        for li in sel.css('[class*=newsflash] ul li'):
-            text = (li.xpath('string(.)').get() or '').strip()
-            text = re.sub(r'^\d{1,2}:\d{2}\s*', '', text).strip()
-            if not text or len(text) < 10 or text in extra_seen:
-                continue
-            a = li.css('a')
-            href = a.css('::attr(href)').get() or ''
-            # 简单分类关键词
-            cat = '时事追踪'
-            if any(kw in text for kw in ['股','市','基金','A股','IPO','财报','营收','利润']):
-                cat = '财经速览'
-            elif any(kw in text for kw in ['公司','企业','融资','上市','CEO','腾讯','阿里']):
-                cat = '公司头条'
-            extra.append({'title': text[:45], 'url': href if href.startswith('http') else f'https://www.jiemian.com{href}',
-                          'summary': text[45:125] if len(text)>45 else '', 'source': '界面新闻',
-                          'date': datetime.now().strftime('%Y-%m-%d'), 'category': cat})
-            extra_seen.add(text)
-            if len(extra) >= 10:
-                break
-
-        # 按分类分配到对应板块（每板块最多补到8条）
-        for cat in ['财经速览', '时事追踪']:
-            cat_items = [i for i in extra if i['category'] == cat][:8]
-            print(f'  · {cat}(补充): {len(cat_items)} 条')
-            all_items.extend(cat_items)
-    except Exception as e:
-        print(f'  ! 主页补充抓取异常: {e}')
 
     if all_items:
         have = existing_keys('news', 'url', [i['url'] for i in all_items])
