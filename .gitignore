@@ -4,3 +4,6 @@ dist
 .env.local
 *.local
 .DS_Store
+__pycache__/
+tmp_dbs/
+*.pyc
