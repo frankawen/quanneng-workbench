@@ -123,26 +123,31 @@ CREATE TABLE IF NOT EXISTS comments (
 
 -- ============================================================
 -- Row Level Security (RLS) 策略
+-- 为每张表分别创建策略（PostgreSQL 不支持 ON *）
 -- ============================================================
-ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE budgets ENABLE ROW LEVEL SECURITY;
-ALTER TABLE habits ENABLE ROW LEVEL SECURITY;
-ALTER TABLE habit_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE body_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE workout_plans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE wishlist ENABLE ROW LEVEL SECURITY;
-ALTER TABLE news ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shijing ENABLE ROW LEVEL SECURITY;
-ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 
--- 公开读取（任何人可查）
-CREATE POLICY "public_read" ON * FOR SELECT USING (true);
-
--- 允许写入（需要认证，但匿名登录也可）
-CREATE POLICY "allow_insert" ON * FOR INSERT WITH CHECK (true);
-CREATE POLICY "allow_update" ON * FOR UPDATE USING (true);
-CREATE POLICY "allow_delete" ON * FOR DELETE USING (true);
+DO $$
+DECLARE
+  tables TEXT[] := ARRAY[
+    'expenses', 'budgets', 'habits', 'habit_records',
+    'body_records', 'workout_plans', 'wishlist',
+    'news', 'shijing', 'quotes', 'comments'
+  ];
+  tbl TEXT;
+BEGIN
+  FOREACH tbl IN ARRAY tables
+  LOOP
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);
+    EXECUTE format('DROP POLICY IF EXISTS "public_read_%I" ON %I', tbl, tbl);
+    EXECUTE format('DROP POLICY IF EXISTS "allow_insert_%I" ON %I', tbl, tbl);
+    EXECUTE format('DROP POLICY IF EXISTS "allow_update_%I" ON %I', tbl, tbl);
+    EXECUTE format('DROP POLICY IF EXISTS "allow_delete_%I" ON %I', tbl, tbl);
+    EXECUTE format('CREATE POLICY "public_read_%I" ON %I FOR SELECT USING (true)', tbl, tbl);
+    EXECUTE format('CREATE POLICY "allow_insert_%I" ON %I FOR INSERT WITH CHECK (true)', tbl, tbl);
+    EXECUTE format('CREATE POLICY "allow_update_%I" ON %I FOR UPDATE USING (true)', tbl, tbl);
+    EXECUTE format('CREATE POLICY "allow_delete_%I" ON %I FOR DELETE USING (true)', tbl, tbl);
+  END LOOP;
+END $$;
 
 -- ============================================================
 -- 索引优化
@@ -156,12 +161,3 @@ CREATE INDEX IF NOT EXISTS idx_wishlist_purchased ON wishlist(purchased);
 CREATE INDEX IF NOT EXISTS idx_news_crawled ON news(crawled_at DESC);
 CREATE INDEX IF NOT EXISTS idx_quotes_crawled ON quotes(crawled_at DESC);
 CREATE INDEX IF NOT EXISTS idx_comments_crawled ON comments(crawled_at DESC);
-
--- ============================================================
--- 示例数据（可选，首次使用时删除）
--- ============================================================
--- INSERT INTO expenses (type, amount, category, date, note) VALUES
---   ('支出', 35.5, '餐饮', '2025-08-20', '午餐'),
---   ('收入', 8000, '工资', '2025-08-01', '工资');
--- INSERT INTO habits (name, type) VALUES ('早起', 'check'), ('喝水', 'count');
--- INSERT INTO body_records (date, weight, height, bmi) VALUES ('2025-08-20', 70.5, 175, 23.0);
