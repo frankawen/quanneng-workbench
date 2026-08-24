@@ -630,7 +630,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-08-21g';
+const BUILD_VERSION = '2026-08-24h';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -1106,14 +1106,19 @@ async function loadHabits() {
   }
 }
 
+let _habitBusy = false;
 async function checkHabit(habitId, date) {
+  if (_habitBusy) return;            // 防快速连点导致的并发竞态（两次 loadHabits 重渲染互相覆盖）
+  _habitBusy = true;
   try {
     const recs = await sbQuery('habit_records', { filter: { property: 'habit_id', operator: 'eq', value: habitId } });
-    const rec = recs.find(r => r.date === date);
+    // 关键修复：必须同时按 habit_id 与 date 匹配，否则 filter 异常时 recs 含其它习惯记录会误翻第一个
+    const rec = recs.find(r => r.habit_id === habitId && r.date === date);
     if (rec) await sbUpdate('habit_records', rec.id, { checked: !rec.checked });
     else await sbInsert('habit_records', { habit_id: habitId, date, checked: true, created_at: new Date().toISOString() });
     toast('已更新'); await loadHabits();
   } catch(e) { toast('操作失败'); }
+  finally { _habitBusy = false; }
 }
 
 async function incHabit(habitId, date, delta) {
