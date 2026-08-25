@@ -789,7 +789,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-08-25b';
+const BUILD_VERSION = '2026-08-25c';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -1143,14 +1143,12 @@ function renderDonutChart(expenses) {
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
   svg.setAttribute('viewBox', '0 0 200 200');
-  svg.setAttribute('width', '100%');
-  svg.setAttribute('height', '200');
-  svg.setAttribute('max-width', '200');
+  svg.setAttribute('width', '180');
+  svg.setAttribute('height', '180');
   svg.style.display = 'block';
-  svg.style.overflow = 'visible';
   svg.style.margin = '0 auto';
 
-  const center = 100, outerR = 85, innerR = 55;
+  const center = 100, outerR = 78, innerR = 50;
   var cumulative = 0;
 
   entries.forEach(function(catAmt, i) {
@@ -1206,7 +1204,7 @@ function renderDonutChart(expenses) {
 
   // \u6302\u8f7d
   // 挂载（保留容器高度，用 flex 纵向排列 SVG + 图例）
-  canvas.style.cssText = 'min-height:220px;display:flex;flex-direction:column;align-items:center;overflow:visible;';
+  canvas.style.cssText = 'min-height:200px;display:flex;flex-direction:column;align-items:center;padding:8px 0;';
   canvas.appendChild(svg);
 
   // \u56fe\u4f8b
