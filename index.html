@@ -572,6 +572,20 @@ canvas { width: 100% !important; height: 100% !important; }
         </div>
       </section>
 
+      <!-- ========== 每日一读 ========== -->
+      <section class="module" id="mod-read">
+        <div class="mhead">
+          <h1>每日一读</h1>
+          <p>学习强国 · 每日一读，与人民日报 05 版评论，每天清晨同步。</p>
+        </div>
+        <div class="chips" id="read-tabs">
+          <button class="chip active" data-tab="news">新闻</button>
+          <button class="chip" data-tab="daily">每日一读</button>
+        </div>
+        <div id="read-content"></div>
+      </section>
+
+
       <!-- ========== 记账理财 ========== -->
       <section class="module" id="mod-finance">
         <div class="mhead">
@@ -733,18 +747,6 @@ canvas { width: 100% !important; height: 100% !important; }
         <div class="list" id="wl-list"></div>
       </section>
 
-      <!-- ========== 每日一读 ========== -->
-      <section class="module" id="mod-read">
-        <div class="mhead">
-          <h1>每日一读</h1>
-          <p>学习强国 · 每日一读，与人民日报 05 版评论，每天清晨同步。</p>
-        </div>
-        <div class="chips" id="read-tabs">
-          <button class="chip active" data-tab="news">新闻</button>
-          <button class="chip" data-tab="daily">每日一读</button>
-        </div>
-        <div id="read-content"></div>
-      </section>
     </div>
   </div>
 </div>
@@ -785,7 +787,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-08-24i';
+const BUILD_VERSION = '2026-08-25a';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -1087,6 +1089,7 @@ async function loadFinance() {
     
     renderFinanceList(expenses);
     renderDonutChart(expenses);
+    renderMonthChart(expenses);
 
   } catch(e) {
     console.error('Finance error:', e);
@@ -1119,7 +1122,7 @@ function renderFinanceList(expenses) {
   `).join('') || emptyState('wallet', '还没有记账记录', '点「记一笔」开始记录收支吧', '记一笔', "$('fn-panel').classList.add('open')");
 }
 
-// ⑥ 甜甜圈图 — 交互式消费结构
+// ⑥ 甜甜圈图 — 交互式消费结构（SVG viewBox 重写，修复移动端不渲染弧形的问题）
 function renderDonutChart(expenses) {
   const canvas = $('fn-pie');
   if (!canvas) return;
@@ -1135,69 +1138,174 @@ function renderDonutChart(expenses) {
   canvas.innerHTML = '';
   if (entries.length === 0) { canvas.innerHTML = '<span style="font-size:13px;color:var(--ink-faint);">暂无支出数据</span>'; return; }
 
-  const size = 200;
-  const center = size / 2;
-  const outerR = 85, innerR = 55;
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('width', size); svg.setAttribute('height', size);
-  svg.style.width = '100%'; svg.style.maxWidth = '200px'; svg.style.margin = '0 auto';
+  svg.setAttribute('viewBox', '0 0 200 200');
+  svg.setAttribute('width', '200');
+  svg.setAttribute('height', '200');
+  svg.style.display = 'block';
+  svg.style.margin = '0 auto';
 
-  entries.forEach(([cat, amt], i) => {
-    const pct = total > 0 ? amt / total : 0;
-    const angle = pct * 2 * Math.PI;
-    const startAngle = i > 0 ? entries.slice(0, i).reduce((s,e) => s + (total > 0 ? e[1]/total : 0) * 2 * Math.PI, 0) : 0;
-    const r1 = outerR, r2 = innerR;
-    const x1 = center + r1 * Math.cos(startAngle - Math.PI/2);
-    const y1 = center + r1 * Math.sin(startAngle - Math.PI/2);
-    const x2 = center + r2 * Math.cos(startAngle - Math.PI/2);
-    const y2 = center + r2 * Math.sin(startAngle - Math.PI/2);
-    const x3 = center + r2 * Math.cos(startAngle - angle - Math.PI/2);
-    const y3 = center + r2 * Math.sin(startAngle - angle - Math.PI/2);
-    const x4 = center + r1 * Math.cos(startAngle - angle - Math.PI/2);
-    const y4 = center + r1 * Math.sin(startAngle - angle - Math.PI/2);
-    const largeArc = angle > Math.PI ? 1 : 0;
-    const path = `${x1},${y1} A ${r1},${r1} 0 ${largeArc},0 ${x4},${y4} L ${x3},${y3} A ${r2},${r2} 0 ${largeArc},1 ${x2},${y2} Z`;
-    const pathEl = document.createElementNS(ns, 'path');
-    pathEl.setAttribute('d', path);
+  const center = 100, outerR = 85, innerR = 55;
+  var cumulative = 0;
+
+  entries.forEach(function(catAmt, i) {
+    var cat = catAmt[0], amt = catAmt[1];
+    var pct = total > 0 ? amt / total : 0;
+    var startAngle = cumulative * 2 * Math.PI;
+    var angle = pct * 2 * Math.PI;
+    cumulative += pct;
+
+    var x1 = center + outerR * Math.cos(startAngle - Math.PI/2);
+    var y1 = center + outerR * Math.sin(startAngle - Math.PI/2);
+    var x2 = center + innerR * Math.cos(startAngle - Math.PI/2);
+    var y2 = center + innerR * Math.sin(startAngle - Math.PI/2);
+    var x3 = center + innerR * Math.cos(startAngle + angle - Math.PI/2);
+    var y3 = center + innerR * Math.sin(startAngle + angle - Math.PI/2);
+    var x4 = center + outerR * Math.cos(startAngle + angle - Math.PI/2);
+    var y4 = center + outerR * Math.sin(startAngle + angle - Math.PI/2);
+    var largeArc = angle > Math.PI ? 1 : 0;
+
+    var d = ['M', x1.toFixed(2), y1.toFixed(2),
+      'A', outerR, outerR, 0, largeArc, 0, x4.toFixed(2), y4.toFixed(2),
+      'L', x3.toFixed(2), y3.toFixed(2),
+      'A', innerR, innerR, 0, largeArc, 1, x2.toFixed(2), y2.toFixed(2),
+      'Z'].join(' ');
+
+    var pathEl = document.createElementNS(ns, 'path');
+    pathEl.setAttribute('d', d);
     pathEl.setAttribute('fill', colors[i % colors.length]);
-    pathEl.setAttribute('stroke', '#fff');
+    pathEl.setAttribute('stroke', '#ffffff');
     pathEl.setAttribute('stroke-width', '2');
     pathEl.style.cursor = 'pointer';
-    pathEl.style.transition = 'opacity 0.2s';
-    pathEl.title = `${cat}：${fmtMoney(amt)} (${Math.round(pct*100)}%)`;
-    pathEl.addEventListener('mouseenter', () => pathEl.style.opacity = '0.7');
-    pathEl.addEventListener('mouseleave', () => pathEl.style.opacity = '1');
+    pathEl.title = cat + '\uff1a' + fmtMoney(amt) + ' (' + Math.round(pct*100) + '%)';
     svg.appendChild(pathEl);
   });
 
-  // 中心文字
-  const text = document.createElementNS(ns, 'text');
-  text.setAttribute('x', center); text.setAttribute('y', center - 6);
-  text.setAttribute('text-anchor', 'middle'); text.setAttribute('fill', 'var(--ink)');
-  text.setAttribute('font-size', '13'); text.setAttribute('font-weight', '600');
-  text.textContent = fmtMoney(total).replace('¥','');
+  // \u4e2d\u5fc3\u6587\u5b57
+  var text = document.createElementNS(ns, 'text');
+  text.setAttribute('x', '100'); text.setAttribute('y', '94');
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('fill', 'var(--ink)');
+  text.setAttribute('font-size', '14');
+  text.setAttribute('font-weight', '600');
+  text.textContent = fmtMoney(total).replace('\u00a5','');
   svg.appendChild(text);
-  const sub = document.createElementNS(ns, 'text');
-  sub.setAttribute('x', center); sub.setAttribute('y', center + 12);
-  sub.setAttribute('text-anchor', 'middle'); sub.setAttribute('fill', 'var(--ink-faint)');
+
+  var sub = document.createElementNS(ns, 'text');
+  sub.setAttribute('x', '100'); sub.setAttribute('y', '112');
+  sub.setAttribute('text-anchor', 'middle');
+  sub.setAttribute('fill', 'var(--ink-faint)');
   sub.setAttribute('font-size', '11');
-  sub.textContent = '本月支出';
+  sub.textContent = '\u672c\u6708\u652f\u51fa';
   svg.appendChild(sub);
 
-  // 挂载前先清空画布（移除旧 svg 与旧图例）
-  canvas.innerHTML = '';
-  canvas.style.cssText = 'height:auto;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+  // \u6302\u8f7d
+  canvas.style.cssText = '';
   canvas.appendChild(svg);
 
-  // 图例（svg 挂载后再插入，父节点必存在）
-  entries.forEach(([cat, amt], i) => {
-    const div = document.createElement('div');
-    div.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);margin-top:4px;width:100%;max-width:200px;';
-    div.innerHTML = `<span style="width:10px;height:10px;border-radius:3px;background:${colors[i%colors.length]};flex-shrink:0;"></span><span>${cat}</span><span style="margin-left:auto;color:var(--ink-faint);">${fmtMoney(amt)} · ${Math.round(amt/total*100)}%</span>`;
-    canvas.appendChild(div);
+  // \u56fe\u4f8b
+  var legend = document.createElement('div');
+  legend.style.cssText = 'display:flex;flex-direction:column;gap:4px;margin-top:8px;width:100%;';
+  entries.forEach(function(catAmt, i) {
+    var cat = catAmt[0], amt = catAmt[1];
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);';
+    row.innerHTML = '<span style="width:10px;height:10px;border-radius:3px;background:' + colors[i%colors.length] + ';flex-shrink:0;display:inline-block;"></span><span>' + esc(cat) + '</span><span style="margin-left:auto;color:var(--ink-faint);">' + fmtMoney(amt) + ' \u00b7 ' + Math.round(amt/total*100) + '%</span>';
+    legend.appendChild(row);
   });
+  canvas.appendChild(legend);
 }
+
+// \u2077 \u6708\u5ea6\u5bf9\u6bd4\u67f1\u72b6\u56fe \u2014 \u8fd16\u4e2a\u6708\u6536\u652f\u5bf9\u6bd4
+function renderMonthChart(expenses) {
+  var container = $('fn-month');
+  if (!container) return;
+  container.innerHTML = '';
+
+  var months = [];
+  for (var mi = 5; mi >= 0; mi--) {
+    var dd = new Date();
+    dd.setMonth(dd.getMonth() - mi);
+    months.push(dd.getFullYear() + '-' + String(dd.getMonth()+1).padStart(2,'0'));
+  }
+
+  var data = months.map(function(m) {
+    return {
+      label: m.slice(5) + '\u6708',
+      expense: expenses.filter(function(e){ return (e.date||'').startsWith(m) && e.type === '\u652f\u51fa'; }).reduce(function(s,e){ return s + (Number(e.amount)||0); }, 0),
+      income: expenses.filter(function(e){ return (e.date||'').startsWith(m) && e.type === '\u6536\u5165'; }).reduce(function(s,e){ return s + (Number(e.amount)||0); }, 0)
+    };
+  });
+
+  var maxVal = Math.max(1, data.reduce(function(mx,d){ return Math.max(mx, d.expense, d.income); }, 1));
+  var ns = 'http://www.w3.org/2000/svg';
+  var W = 280, H = 160, padL = 30, padR = 10, padT = 10, padB = 24;
+  var chartW = W - padL - padR, chartH = H - padT - padB;
+  var barW = chartW / months.length * 0.32;
+  var gap = chartW / months.length;
+
+  var svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.setAttribute('width', '100%');
+  svg.style.height = H + 'px';
+  svg.style.display = 'block';
+
+  for (var li = 0; li <= 4; li++) {
+    var ly = padT + chartH - (li/4)*chartH;
+    var line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', padL); line.setAttribute('y1', ly);
+    line.setAttribute('x2', W-padR); line.setAttribute('y2', ly);
+    line.setAttribute('stroke', '#eee');
+    svg.appendChild(line);
+  }
+
+  data.forEach(function(d, i) {
+    var cx = padL + gap*i + gap/2;
+    var eh = (d.expense/maxVal)*chartH;
+    var ih = (d.income/maxVal)*chartH;
+
+    if (d.expense > 0) {
+      var er = document.createElementNS(ns, 'rect');
+      er.setAttribute('x', cx - barW - 1.5);
+      er.setAttribute('y', padT + chartH - eh);
+      er.setAttribute('width', barW);
+      er.setAttribute('height', eh);
+      er.setAttribute('rx', '2');
+      er.setAttribute('fill', '#C4704B');
+      er.title = '\u652f\u51fa ' + fmtMoney(d.expense);
+      svg.appendChild(er);
+    }
+    if (d.income > 0) {
+      var ir = document.createElementNS(ns, 'rect');
+      ir.setAttribute('x', cx + 1.5);
+      ir.setAttribute('y', padT + chartH - ih);
+      ir.setAttribute('width', barW);
+      ir.setAttribute('height', ih);
+      ir.setAttribute('rx', '2');
+      ir.setAttribute('fill', '#6B8E7B');
+      ir.title = '\u6536\u5165 ' + fmtMoney(d.income);
+      svg.appendChild(ir);
+    }
+    var lbl = document.createElementNS(ns, 'text');
+    lbl.setAttribute('x', cx);
+    lbl.setAttribute('y', H - 5);
+    lbl.setAttribute('text-anchor', 'middle');
+    lbl.setAttribute('fill', '#999');
+    lbl.setAttribute('font-size', '11');
+    lbl.textContent = d.label;
+    svg.appendChild(lbl);
+  });
+
+  var legend = document.createElement('div');
+  legend.style.cssText = 'display:flex;justify-content:center;gap:16px;margin-top:8px;font-size:11px;color:var(--ink-soft);';
+  legend.innerHTML = '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#C4704B;"></span>\u652f\u51fa</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#6B8E7B;"></span>\u6536\u5165</span>';
+
+  container.appendChild(svg);
+  container.appendChild(legend);
+}
+
 
 function filterFinance(cat) {
   document.querySelectorAll('#fn-chips .chip').forEach(c => c.classList.toggle('active', c.textContent === cat));
