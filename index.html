@@ -501,6 +501,12 @@ canvas { width: 100% !important; height: 100% !important; }
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>
         今日概览
       </button>
+
+      <button class="nav-btn" data-mod="read">
+        <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        每日一读
+      </button>
+
       <button class="nav-btn" data-mod="finance">
         <svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="M8 16l3-4 3 2 4-6"/></svg>
         记账理财
@@ -516,10 +522,6 @@ canvas { width: 100% !important; height: 100% !important; }
       <button class="nav-btn" data-mod="wishlist">
         <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
         待买清单
-      </button>
-      <button class="nav-btn" data-mod="read">
-        <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
-        每日一读
       </button>
     </nav>
     <div class="side-foot">数据存于云端 · 多端同步<br>新增/修改/删除即时写回<br><span id="build-stamp"></span></div>
@@ -787,7 +789,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-08-25a';
+const BUILD_VERSION = '2026-08-25b';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -1141,9 +1143,11 @@ function renderDonutChart(expenses) {
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
   svg.setAttribute('viewBox', '0 0 200 200');
-  svg.setAttribute('width', '200');
+  svg.setAttribute('width', '100%');
   svg.setAttribute('height', '200');
+  svg.setAttribute('max-width', '200');
   svg.style.display = 'block';
+  svg.style.overflow = 'visible';
   svg.style.margin = '0 auto';
 
   const center = 100, outerR = 85, innerR = 55;
@@ -1201,7 +1205,8 @@ function renderDonutChart(expenses) {
   svg.appendChild(sub);
 
   // \u6302\u8f7d
-  canvas.style.cssText = '';
+  // 挂载（保留容器高度，用 flex 纵向排列 SVG + 图例）
+  canvas.style.cssText = 'min-height:220px;display:flex;flex-direction:column;align-items:center;overflow:visible;';
   canvas.appendChild(svg);
 
   // \u56fe\u4f8b
