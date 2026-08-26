@@ -195,19 +195,28 @@ label { font-size: 12px; color: var(--ink-soft); display: block; margin-bottom: 
 .chart-area { height: 180px; position: relative; }
 canvas { width: 100% !important; height: 100% !important; }
 
-/* ⑤ 热力图 — GitHub 风格 + sage 配色 */
-.heatmap-wrap { position: relative; padding: 8px 0 0 28px; }
-.heatmap-labels { position: absolute; left: 0; top: 8px; display: flex; flex-direction: column; justify-content: space-between; height: calc(100% - 12px); font-size: 10px; color: var(--ink-faint); padding: 2px 0; }
-.heatmap-months { display: flex; justify-content: space-between; font-size: 10px; color: var(--ink-faint); margin-left: 28px; margin-bottom: 4px; }
+/* ⑤ 热力图 — 打卡日历卡片 */
+.heatmap-wrap { position: relative; padding: 8px 0 0 0; }
+.heatmap-months { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-faint); margin-bottom: 6px; }
 .heatmap { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
-.heat-cell { aspect-ratio: 1; border-radius: 4px; background: var(--paper-3); transition: transform 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out); cursor: pointer; position: relative; }
-.heat-cell:hover { transform: scale(1.2); z-index: 2; box-shadow: 0 2px 6px rgba(61,50,41,0.15); }
-.heat-cell.l1 { background: #D4E4DA; }
-.heat-cell.l2 { background: #A8C9B6; }
-.heat-cell.l3 { background: #6B8E7B; }
-.heat-cell.l4 { background: #4A7A5E; }
-.heat-cell.l5 { background: #2D5A3D; }
+.heat-cell { aspect-ratio: 1.1; border-radius: 6px; background: var(--paper-2); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; color: var(--ink-faint); transition: all 0.15s; cursor: pointer; position: relative; border: 1px solid transparent; }
+.heat-cell:hover { transform: scale(1.15); z-index: 2; box-shadow: 0 2px 8px rgba(61,50,41,0.12); border-color: var(--line); }
+.heat-cell .hc-day { font-size: 10px; font-weight: 500; line-height: 1; }
+.heat-cell .hc-dot { width: 5px; height: 5px; border-radius: 50%; margin-top: 2px; background: transparent; }
+.heat-cell.l1 .hc-dot { background: #D4E4DA; }
+.heat-cell.l2 .hc-dot { background: #A8C9B6; }
+.heat-cell.l3 .hc-dot { background: #6B8E7B; }
+.heat-cell.l4 { background: #E8F5E9; border-color: #6B8E7B; }
+.heat-cell.l4 .hc-day { color: #4A7A5E; font-weight: 700; }
+.heat-cell.l4 .hc-dot { background: #4A7A5E; width: 6px; height: 6px; }
+.heat-cell.today { background: #FFF8E1; border-color: #C9A84C; }
+.heat-cell.today .hc-day { color: #B8860B; font-weight: 700; }
+.heat-cell.empty { opacity: 0.35; }
 .heat-cell[data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; font-size: 10px; padding: 3px 6px; border-radius: 4px; white-space: nowrap; z-index: 10; pointer-events: none; }
+.heatmap-stats { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+.heatmap-stat { text-align: center; }
+.heatmap-stat-val { font-size: 16px; font-weight: 700; color: var(--ink); }
+.heatmap-stat-lbl { font-size: 10px; color: var(--ink-faint); margin-top: 1px; }
 
 /* 诗经卡片 */
 .poem-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; border-left: 3px solid var(--pink); }
@@ -657,9 +666,6 @@ canvas { width: 100% !important; height: 100% !important; }
           <div class="card-title">近30天热力图</div>
           <div class="heatmap-months" id="heatmap-months"></div>
           <div class="heatmap-wrap">
-            <div class="heatmap-labels" id="heatmap-labels">
-              <span>一</span><span>三</span><span>五</span><span>日</span>
-            </div>
             <div class="heatmap" id="habit-heatmap"></div>
           </div>
         </div>
@@ -789,7 +795,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-08-26a';
+const BUILD_VERSION = '2026-08-26b';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -1286,7 +1292,7 @@ function renderMonthChart(expenses) {
       eVal.setAttribute('text-anchor', 'middle');
       eVal.setAttribute('fill', '#C4704B'); eVal.setAttribute('font-size', '9');
       eVal.setAttribute('font-weight', '600');
-      eVal.textContent = d.expense >= 1000 ? (d.expense/1000).toFixed(1)+'k' : String(d.expense);
+      eVal.textContent = d.expense >= 1000 ? (d.expense/1000).toFixed(1)+'k' : String(Math.round(d.expense));
       svg.appendChild(eVal);
     }
 
@@ -1307,7 +1313,7 @@ function renderMonthChart(expenses) {
       iVal.setAttribute('text-anchor', 'middle');
       iVal.setAttribute('fill', '#6B8E7B'); iVal.setAttribute('font-size', '9');
       iVal.setAttribute('font-weight', '600');
-      iVal.textContent = d.income >= 1000 ? (d.income/1000).toFixed(1)+'k' : String(d.income);
+      iVal.textContent = d.income >= 1000 ? (d.income/1000).toFixed(1)+'k' : String(Math.round(d.income));
       svg.appendChild(iVal);
     }
 
@@ -1485,6 +1491,7 @@ async function deleteHabit(id) {
 
 function renderHeatmap(records) {
   const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   const days = 30;
   const heatmap = [];
   for (let i = days - 1; i >= 0; i--) {
@@ -1492,36 +1499,54 @@ function renderHeatmap(records) {
     const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const dayRecs = records.filter(r => r.date === ds);
     const cnt = dayRecs.filter(r => r.checked).length;
-    heatmap.push({ date: ds, count: cnt, total: dayRecs.length, dow: d.getDay(), month: d.getMonth(), day: d.getDate() });
+    heatmap.push({ date: ds, count: cnt, total: dayRecs.length, dow: d.getDay(), month: d.getMonth(), day: d.getDate(), isToday: ds === todayStr });
+  }
+
+  // 统计
+  const daysWithCheck = heatmap.filter(d => d.count > 0).length;
+  const totalChecks = heatmap.reduce((s, d) => s + d.count, 0);
+  // 计算连续打卡（从今天往前数）
+  let streak = 0;
+  for (let i = heatmap.length - 1; i >= 0; i--) {
+    if (heatmap[i].count > 0) streak++;
+    else break;
   }
   const maxCnt = Math.max(...heatmap.map(d => d.total), 1);
-  
-  // 月份标签（找每个月第一天的位置）
-  const monthLabels = [];
-  let lastMonth = -1;
-  heatmap.forEach((d, i) => {
-    if (d.month !== lastMonth) {
-      monthLabels.push({ idx: i, label: `${d.month + 1}月` });
-      lastMonth = d.month;
-    }
-  });
+
+  // 月份标签
   const monthsEl = $('heatmap-months');
   if (monthsEl) {
-    // 简化：显示起始月和结束月
     const firstMonth = heatmap[0].month + 1;
     const lastMonthNum = heatmap[heatmap.length - 1].month + 1;
     if (firstMonth === lastMonthNum) {
-      monthsEl.innerHTML = `<span></span><span style="color:var(--ink-soft);">${firstMonth}月</span><span></span>`;
+      monthsEl.innerHTML = `<span></span><span style="color:var(--ink-soft);font-weight:600;">${firstMonth}月</span><span></span>`;
     } else {
-      monthsEl.innerHTML = `<span>${firstMonth}月</span><span></span><span>${lastMonthNum}月</span>`;
+      monthsEl.innerHTML = `<span>${firstMonth}月</span><span style="color:var(--ink-faint);">→</span><span style="font-weight:600;">${lastMonthNum}月</span>`;
     }
   }
-  
+
+  // 渲染日历格子
   $('habit-heatmap').innerHTML = heatmap.map(d => {
-    const lvl = d.total === 0 ? '' : d.count/maxCnt > 0.8 ? 'l4' : d.count/maxCnt > 0.5 ? 'l3' : d.count/maxCnt > 0.2 ? 'l2' : 'l1';
-    const tip = `${d.date}：打卡 ${d.count} 项`;
-    return `<div class="heat-cell ${lvl}" data-tip="${tip}" title="${tip}"></div>`;
+    const lvl = d.total === 0 ? '' : d.count / maxCnt > 0.7 ? 'l4' : d.count / maxCnt > 0.35 ? 'l3' : d.count > 0 ? 'l2' : 'l1';
+    const isToday = d.isToday ? 'today' : '';
+    const isEmpty = d.total === 0 ? 'empty' : '';
+    const tip = `${d.date}：打卡 ${d.count}/${d.total} 项`;
+    return `<div class="heat-cell ${lvl} ${isToday} ${isEmpty}" data-tip="${tip}" title="${tip}"><span class="hc-day">${d.day}</span><span class="hc-dot"></span></div>`;
   }).join('');
+
+  // 底部统计
+  let statsEl = $('heatmap-stats');
+  if (!statsEl) {
+    statsEl = document.createElement('div');
+    statsEl.id = 'heatmap-stats';
+    statsEl.className = 'heatmap-stats';
+    $('habit-heatmap').parentNode.appendChild(statsEl);
+  }
+  statsEl.innerHTML =
+    `<div class="heatmap-stat"><div class="heatmap-stat-val" style="color:#C4704B">${streak}</div><div class="heatmap-stat-lbl">连续打卡</div></div>` +
+    `<div class="heatmap-stat"><div class="heatmap-stat-val" style="color:#6B8E7B">${daysWithCheck}</div><div class="heatmap-stat-lbl">活跃天数</div></div>` +
+    `<div class="heatmap-stat"><div class="heatmap-stat-val" style="color:#C9A84C">${totalChecks}</div><div class="heatmap-stat-lbl">总打卡次数</div></div>` +
+    `<div class="heatmap-stat"><div class="heatmap-stat-val">${days}</div><div class="heatmap-stat-lbl">统计周期</div></div>`;
 }
 
 // ============================================================
