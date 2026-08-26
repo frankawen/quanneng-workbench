@@ -1003,13 +1003,13 @@ canvas { width: 100% !important; height: 100% !important; }
 const CFG = {
   SUPABASE_URL: 'https://wentfvkdfecrfelgmdix.supabase.co',
   SUPABASE_KEY: 'sb_publishable_JoMfWIeViOhdQONkYiGagQ_Oen6GgGJ',
-  AGNES_API_KEY: 'sk-3vuARFWTiVEz2nXf1HyvFLohLZ4dCAibH2uAmOPkYiIopaSh',
-  AGNES_URL: 'https://api.agnes-ai.cn/v1',
+  AGNES_API_KEY: 'sk-GHilR4bfh8ulWTCtRBipDdEvosUniYt1OT2ur5Vi9JlfzZf5',
+  AGNES_URL: 'https://apihub.agnes-ai.com/v1',
   AGNES_MODEL: 'agnes-2.5-flash'
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-08-26r';
+const BUILD_VERSION = '2026-08-26s';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -2311,7 +2311,7 @@ async function compressImage(file, maxWidth = 800) {
 async function recognizeImage(dataUrl, prompt) {
   // 30s 超时（AI 识别通常 3-10s，30s 兜底避免卡死）
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 60000);
+  const timer = setTimeout(() => ctl.abort(), 30000);
   try {
     const res = await fetch(`${CFG.AGNES_URL}/chat/completions`, {
       method: 'POST',
