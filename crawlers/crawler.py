@@ -13,8 +13,10 @@ import httpx
 from parsel import Selector
 import json
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urljoin
+# 北京时间时区（GitHub Actions runner 为 UTC，必须用北京时间对齐人民日报版面日期）
+BEIJING = timezone(timedelta(hours=8))
 import os
 
 SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://wentfvkdfecrfelgmdix.supabase.co')
@@ -123,7 +125,7 @@ def _parse_jiemian_list(url, category, max_items=8):
                 'url': href,
                 'summary': summary[:120],      # 摘要防御性截断
                 'source': '界面新闻',
-                'date': datetime.now().strftime('%Y-%m-%d'),
+                'date': datetime.now(BEIJING).strftime('%Y-%m-%d'),
                 'category': category
             })
             if len(items) >= max_items:
@@ -149,7 +151,7 @@ def fetch_news():
         api_post('news', new)
         # 清理 7 天前的旧新闻，防止无限累积（PostgREST DELETE 需 column=op.value 格式）
         try:
-            cutoff = (datetime.now().date() - timedelta(days=7)).isoformat()
+            cutoff = (datetime.now(BEIJING).date() - timedelta(days=7)).isoformat()
             r = httpx.delete(f'{BASE_URL}/news?date=lt.{cutoff}',
                              headers=HEADERS, timeout=20)
             print(f'  · 清理 {cutoff} 前旧新闻: {r.status_code}')
@@ -293,7 +295,7 @@ def fetch_quotes():
 def fetch_comments():
     print('[评论] 抓取人民日报电子版当日第5版（评论）...')
     try:
-        today = datetime.now()
+        today = datetime.now(BEIJING)
         page_url = f'https://paper.people.com.cn/rmrb/pc/layout/{today.strftime("%Y%m")}/{today.strftime("%d")}/node_05.html'
         resp = httpx.get(page_url, headers=UA, timeout=30, follow_redirects=True)
         if resp.status_code != 200:
