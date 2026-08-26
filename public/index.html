@@ -7,6 +7,10 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>全能工作台</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="favicon-192.png">
 <style>
 :root {
   --paper: #FAF7F2;
@@ -146,6 +150,64 @@ label { font-size: 12px; color: var(--ink-soft); display: block; margin-bottom: 
 .linkbtn { background: none; border: none; color: var(--ink-faint); cursor: pointer; font-size: 12px; padding: 4px 6px; border-radius: 4px; }
 .linkbtn:hover { color: var(--accent); text-decoration: underline; }
 
+/* ═══ 记账列表 — 新版（参考图2风格） ═══ */
+.fn-list-header { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 10px; }
+.fn-list-title { font-size: 18px; font-weight: 700; color: var(--ink); margin: 0; }
+.fn-cat-select {
+  padding: 7px 28px 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.fn-cat-select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.fn-list { display: flex; flex-direction: column; }
+.fn-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.15s;
+}
+.fn-item:last-child { border-bottom: none; }
+.fn-item:hover { background: var(--paper-2); border-radius: 10px; }
+
+/* 左侧图标 */
+.fn-item__icon {
+  width: 42px; height: 42px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+
+/* 中间信息 */
+.fn-item__body { flex: 1; min-width: 0; }
+.fn-item__name { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+.fn-item__meta { font-size: 12px; color: var(--ink-faint); }
+
+/* 右侧金额+删除 */
+.fn-item__right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.fn-item__amt { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fn-item__amt--exp { color: #D94545; }
+.fn-item__amt--inc { color: #3A9B5A; }
+.fn-item__del {
+  background: none; border: none; cursor: pointer;
+  font-size: 15px; padding: 4px; border-radius: 6px;
+  opacity: 0.35; transition: opacity 0.15s, transform 0.15s;
+  line-height: 1;
+}
+.fn-item__del:hover { opacity: 1; transform: scale(1.15); }
+
+.fn-empty { text-align: center; padding: 36px 0; color: var(--ink-faint); font-size: 13px; }
+
 /* 标签 */
 .tag { display: inline-block; font-size: 11px; padding: 2px 9px; border-radius: 12px; background: var(--paper-3); color: var(--ink-soft); }
 .tag-pink { background: var(--pink-soft); color: var(--pink); }
@@ -195,19 +257,54 @@ label { font-size: 12px; color: var(--ink-soft); display: block; margin-bottom: 
 .chart-area { height: 180px; position: relative; }
 canvas { width: 100% !important; height: 100% !important; }
 
-/* ⑤ 热力图 — GitHub 风格 + sage 配色 */
-.heatmap-wrap { position: relative; padding: 8px 0 0 28px; }
-.heatmap-labels { position: absolute; left: 0; top: 8px; display: flex; flex-direction: column; justify-content: space-between; height: calc(100% - 12px); font-size: 10px; color: var(--ink-faint); padding: 2px 0; }
-.heatmap-months { display: flex; justify-content: space-between; font-size: 10px; color: var(--ink-faint); margin-left: 28px; margin-bottom: 4px; }
-.heatmap { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
-.heat-cell { aspect-ratio: 1; border-radius: 4px; background: var(--paper-3); transition: transform 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out); cursor: pointer; position: relative; }
-.heat-cell:hover { transform: scale(1.2); z-index: 2; box-shadow: 0 2px 6px rgba(61,50,41,0.15); }
-.heat-cell.l1 { background: #D4E4DA; }
-.heat-cell.l2 { background: #A8C9B6; }
-.heat-cell.l3 { background: #6B8E7B; }
-.heat-cell.l4 { background: #4A7A5E; }
-.heat-cell.l5 { background: #2D5A3D; }
-.heat-cell[data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; font-size: 10px; padding: 3px 6px; border-radius: 4px; white-space: nowrap; z-index: 10; pointer-events: none; }
+/* ⑤ 热力图 — 按习惯分行的打卡矩阵（参考 GitHub 贡献图风格） */
+.heatmap-section { margin-top: 20px; }
+.heatmap-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.heatmap-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+.heatmap-title span { color: var(--accent); }
+.heatmap-hint { font-size: 11px; color: var(--ink-faint); }
+.heatmap-motto { font-size: 16px; font-weight: 700; color: var(--ink); margin: 12px 0 14px; letter-spacing: 1px; }
+
+.hm-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
+.hm-grid-wrap::-webkit-scrollbar { height: 4px; }
+.hm-grid-wrap::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+
+/* 日期标题行 — 每天显示数字 */
+.hm-date-row { display: flex; gap: 3px; min-width: max-content; padding-left: 72px; margin-bottom: 4px; }
+.hm-date-cell { width: 26px; text-align: center; font-size: 10px; color: var(--ink-faint); line-height: 1; flex-shrink: 0; }
+.hm-stats { display: flex; justify-content: space-around; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.hm-stat { text-align: center; }
+.hm-stat-val { font-size: 16px; font-weight: 700; color: var(--ink); }
+.hm-stat-lbl { font-size: 10px; color: var(--ink-faint); margin-top: 2px; }
+
+/* 习惯行 */
+.hm-body { display: flex; flex-direction: column; gap: 6px; }
+.hm-row { display: flex; align-items: center; gap: 3px; min-width: max-content; }
+.hm-row-label { width: 64px; flex-shrink: 0; display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; color: var(--ink); }
+.hm-row-label .hm-icon { font-size: 15px; flex-shrink: 0; }
+.hm-row-label .hm-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-row-count { font-size: 11px; color: var(--ink-faint); margin-left: auto; flex-shrink: 0; min-width: 28px; text-align: right; }
+
+/* 格子 */
+.hm-cells { display: flex; gap: 3px; }
+.hm-cell { width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0; transition: transform 0.12s, box-shadow 0.12s; cursor: pointer; position: relative; }
+.hm-cell:hover { transform: scale(1.2); z-index: 2; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+/* 等级颜色 — 绿色系（参考截图） */
+.hm-cell.l0 { background: #F0F4EF; }          /* 无记录 / 未打卡 */
+.hm-cell.l1 { background: #C8E0CF; }          /* 浅绿 */
+.hm-cell.l2 { background: #8FC1A0; }          /* 中绿 */
+.hm-cell.l3 { background: #52A76A; }          /* 深绿 */
+.hm-cell.l4 { background: #2D7D3F; }          /* 最深绿 */
+.hm-cell.today { box-shadow: inset 0 0 0 1.5px rgba(200,160,60,0.5); }
+.hm-cell.future { opacity: 0.25; }
+
+/* tooltip */
+.hm-cell[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: #fff; font-size: 10px; padding: 3px 7px;
+  border-radius: 4px; white-space: nowrap; z-index: 10; pointer-events: none;
+}
 
 /* 诗经卡片 */
 .poem-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; border-left: 3px solid var(--pink); }
@@ -252,21 +349,136 @@ canvas { width: 100% !important; height: 100% !important; }
 .quote-meta-row { font-size: 13px; color: var(--ink-soft); margin-bottom: 4px; }
 .quote-analysis { font-size: 13px; color: var(--ink-soft); line-height: 1.7; margin-top: 6px; }
 
-/* 新闻四板块 — 杂志式版面（头条+列表分栏） */
-.news-tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
-.news-tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid var(--line); background: #fff; border-radius: 999px; cursor: pointer; font-size: 13px; color: var(--ink-soft); transition: all 0.2s var(--ease-out); font-family: inherit; }
-.news-tab:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
-.news-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: var(--shadow-sm); }
-.news-tab svg { width: 14px; height: 14px; flex: 0 0 14px; stroke: currentColor; fill: none; stroke-width: 1.8; }
-.news-tab .tab-count { background: rgba(255,255,255,0.25); padding: 1px 7px; border-radius: 8px; font-size: 11px; font-weight: 500; }
-.news-tab:not(.active) .tab-count { background: var(--paper-3); color: var(--ink-faint); }
+/* ═══ 杂志式新闻阅读 — 左侧导航 + 右侧内容 ═══ */
+.news-mag {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.news-mag__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: sticky;
+  top: 20px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 8px;
+}
+.news-mag__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink-soft);
+  transition: all 0.2s var(--ease-out);
+  position: relative;
+}
+.news-mag__item:hover {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+.news-mag__item.active {
+  background: var(--section-color, var(--accent-soft));
+  color: #fff;
+  background-color: var(--sec-color);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.news-mag__item.active .news-mag__name { color: #fff; font-weight: 600; }
+.news-mag__item.active .news-mag__count {
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+}
+.news-mag__icon {
+  width: 22px; height: 22px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.news-mag__icon svg {
+  width: 16px; height: 16px;
+  stroke: currentColor; fill: none; stroke-width: 1.8;
+}
+.news-mag__name { flex: 1; font-weight: 500; font-size: 13px; color: var(--ink-soft); }
+.news-mag__count {
+  font-size: 11px;
+  background: var(--paper-3);
+  color: var(--ink-faint);
+  padding: 1px 7px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.news-mag__short { display: none; }
+.news-mag__content {
+  min-width: 0;
+  transition: opacity 0.15s ease;
+}
 
-.news-section { margin-bottom: 22px; }
+/* ═══ 新闻板块内容区（保留原样式） ═══ */
+.news-section { }
 .news-section-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--section-bg, var(--accent-soft)); border-radius: 10px; margin-bottom: 14px; }
 .news-section-icon { width: 26px; height: 26px; flex: 0 0 26px; display: flex; align-items: center; justify-content: center; border-radius: 7px; background: var(--section-color, var(--accent)); color: #fff; }
 .news-section-icon svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
 .news-section-name { font-size: 15px; font-weight: 600; color: var(--ink); }
 .news-section-count { font-size: 12px; color: var(--ink-faint); margin-left: auto; }
+
+/* 手机端：左侧垂直导航（贴左下角）+ 右侧内容区，与网页版一致 */
+@media (max-width: 600px) {
+  .news-mag {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 10px;
+  }
+  .news-mag__nav {
+    position: sticky;
+    bottom: 14px;
+    align-self: flex-end;
+    flex-direction: column;
+    gap: 2px;
+    width: 26px;
+    flex-shrink: 0;
+    padding: 5px 2px;
+    overflow: visible;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  }
+  .news-mag__item {
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    padding: 5px 1px;
+    min-width: 0;
+    max-width: none;
+    text-align: center;
+    flex-shrink: 0 !important;
+    justify-content: center;
+  }
+  .news-mag__icon { display: none !important; }
+  .news-mag__name { display: none !important; }
+  .news-mag__count { display: none !important; }
+  .news-mag__short {
+    display: inline-block !important;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    line-height: 1.08;
+    letter-spacing: 1px;
+  }
+  .news-mag__item.active .news-mag__short { color: #fff; }
+  .news-mag__content { flex: 1; min-width: 0; }
+}
 
 /* 头条大卡 — 标题区/内容区上下分栏 */
 .news-hero { display: block; padding: 20px 22px 16px; background: #fff; border: 1px solid var(--line); border-radius: 14px; text-decoration: none; color: inherit; transition: all 0.2s var(--ease-out); margin-bottom: 10px; position: relative; overflow: hidden; }
@@ -297,7 +509,6 @@ canvas { width: 100% !important; height: 100% !important; }
   .news-hero-desc { -webkit-line-clamp: 2; font-size: 13px; }
   .news-list-num { font-size: 14px; min-width: 18px; }
   .news-section-header { padding: 8px 12px; }
-  .news-tab { padding: 6px 12px; font-size: 12px; }
 }
 
 /* 移动端底部导航 — ② 毛玻璃 */
@@ -331,6 +542,161 @@ canvas { width: 100% !important; height: 100% !important; }
 .hero-sub { font-size: 13px; opacity: 0.85; display: flex; justify-content: space-between; align-items: flex-end; }
 .hero-deco { position: absolute; right: -20px; bottom: -20px; width: 140px; height: 140px; opacity: 0.15; }
 .hero-deco svg { width: 100%; height: 100%; stroke: #fff; fill: none; stroke-width: 1.2; }
+
+/* ═══════════════════ 习惯打卡卡片 — 参考设计 ═══════════════════ */
+.habit-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), border-color 0.2s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.habit-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--line-strong);
+}
+.habit-card:active {
+  transform: scale(0.98);
+}
+
+/* 左侧图标 */
+.habit-card__icon {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--pink-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  line-height: 1;
+  transition: transform 0.3s var(--ease-spring);
+}
+.habit-card:hover .habit-card__icon {
+  transform: scale(1.1) rotate(-5deg);
+}
+
+/* 中间信息 */
+.habit-card__info {
+  flex: 1;
+  min-width: 0;
+}
+.habit-card__name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 3px;
+  letter-spacing: 0.3px;
+}
+.habit-card__goal {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+/* 右侧 — 勾选打卡圆圈 */
+.habit-check {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  color: var(--line-strong);
+  transition: color 0.25s var(--ease-out), transform 0.3s var(--ease-spring);
+}
+.habit-check__circle {
+  width: 100%;
+  height: 100%;
+}
+.habit-check--done {
+  color: var(--sage);
+}
+.habit-check--done .habit-check__tick {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: tickDraw 0.3s var(--ease-out) forwards;
+}
+@keyframes tickDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* 打卡完成时卡片微变化 */
+.habit-card[data-done="true"] {
+  border-color: var(--sage-soft);
+  background: linear-gradient(135deg, #fff 0%, #f8fdf9 100%);
+}
+
+/* 计数打卡 */
+.habit-count-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.habit-count-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s var(--ease-out);
+  line-height: 1;
+}
+.habit-count-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.habit-count-btn:active {
+  transform: scale(0.9);
+}
+.habit-count-num {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  min-width: 36px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.habit-count-num small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink-faint);
+  margin-left: 2px;
+}
+
+/* 数值输入 */
+.habit-val-input {
+  flex: 0 0 auto;
+  width: 80px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.habit-val-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
 </style>
 </head>
 <body>
@@ -346,6 +712,12 @@ canvas { width: 100% !important; height: 100% !important; }
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>
         今日概览
       </button>
+
+      <button class="nav-btn" data-mod="read">
+        <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        每日一读
+      </button>
+
       <button class="nav-btn" data-mod="finance">
         <svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="M8 16l3-4 3 2 4-6"/></svg>
         记账理财
@@ -361,10 +733,6 @@ canvas { width: 100% !important; height: 100% !important; }
       <button class="nav-btn" data-mod="wishlist">
         <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
         待买清单
-      </button>
-      <button class="nav-btn" data-mod="read">
-        <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
-        每日一读
       </button>
     </nav>
     <div class="side-foot">数据存于云端 · 多端同步<br>新增/修改/删除即时写回<br><span id="build-stamp"></span></div>
@@ -417,6 +785,20 @@ canvas { width: 100% !important; height: 100% !important; }
         </div>
       </section>
 
+      <!-- ========== 每日一读 ========== -->
+      <section class="module" id="mod-read">
+        <div class="mhead">
+          <h1>每日一读</h1>
+          <p>学习强国 · 每日一读，与人民日报 05 版评论，每天清晨同步。</p>
+        </div>
+        <div class="chips" id="read-tabs">
+          <button class="chip active" data-tab="news">新闻</button>
+          <button class="chip" data-tab="daily">每日一读</button>
+        </div>
+        <div id="read-content"></div>
+      </section>
+
+
       <!-- ========== 记账理财 ========== -->
       <section class="module" id="mod-finance">
         <div class="mhead">
@@ -456,8 +838,15 @@ canvas { width: 100% !important; height: 100% !important; }
             <div id="fn-month" style="height:200px;"></div>
           </div>
         </div>
-        <div class="chips" id="fn-chips"></div>
-        <div class="list" id="fn-list"></div>
+
+        <!-- ═══ 最近账目 — 标题行 + 分类下拉 ═══ -->
+        <div class="fn-list-header">
+          <h2 class="fn-list-title">最近账目</h2>
+          <select class="fn-cat-select" id="fn-cat-filter" onchange="filterFinance(this.value)">
+            <option value="全部">全部分类</option>
+          </select>
+        </div>
+        <div class="fn-list" id="fn-list"></div>
       </section>
 
       <!-- ========== 习惯健康 ========== -->
@@ -482,14 +871,17 @@ canvas { width: 100% !important; height: 100% !important; }
           <button class="btn btn-sm" id="habit-cancel" style="margin-left:8px;">取消</button>
         </div>
         <div id="habits-list"></div>
-        <div class="card" style="margin-top:16px;">
-          <div class="card-title">近30天热力图</div>
-          <div class="heatmap-months" id="heatmap-months"></div>
-          <div class="heatmap-wrap">
-            <div class="heatmap-labels" id="heatmap-labels">
-              <span>一</span><span>三</span><span>五</span><span>日</span>
-            </div>
-            <div class="heatmap" id="habit-heatmap"></div>
+
+        <!-- ═══ 热力图区域 — 按习惯分行 ═══ -->
+        <div class="heatmap-section" id="heatmap-section">
+          <div class="heatmap-header">
+            <span class="heatmap-title"><span id="hm-day-count">30</span> 天 热力图</span>
+            <span class="heatmap-hint">手机可横向滑动↔</span>
+          </div>
+          <div class="heatmap-motto">坚持，是有形状的</div>
+          <div class="hm-grid-wrap">
+            <div class="hm-date-row" id="hm-dates"></div>
+            <div class="hm-body" id="hm-rows"></div>
           </div>
         </div>
       </section>
@@ -578,18 +970,6 @@ canvas { width: 100% !important; height: 100% !important; }
         <div class="list" id="wl-list"></div>
       </section>
 
-      <!-- ========== 每日一读 ========== -->
-      <section class="module" id="mod-read">
-        <div class="mhead">
-          <h1>每日一读</h1>
-          <p>学习强国 · 每日一读，与人民日报 05 版评论，每天清晨同步。</p>
-        </div>
-        <div class="chips" id="read-tabs">
-          <button class="chip active" data-tab="news">新闻</button>
-          <button class="chip" data-tab="daily">每日一读</button>
-        </div>
-        <div id="read-content"></div>
-      </section>
     </div>
   </div>
 </div>
@@ -597,11 +977,10 @@ canvas { width: 100% !important; height: 100% !important; }
 <!-- 移动端底部导航 -->
 <nav class="tabbar">
   <button class="active" data-mod="overview"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>概览</button>
+  <button data-mod="read"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>一读</button>
   <button data-mod="finance"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="M8 16l3-4 3 2 4-6"/></svg>记账</button>
   <button data-mod="habits"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>习惯</button>
-  <button data-mod="fitness"><svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>健身</button>
-  <button data-mod="wishlist"><svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18"/></svg>待买</button>
-  <button data-mod="read"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>一读</button>
+  <button data-mod="other"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>其他</button>
 </nav>
 
 <div class="toast" id="toast"></div>
@@ -630,7 +1009,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-08-24h';
+const BUILD_VERSION = '2026-08-26o';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -719,6 +1098,8 @@ function esc(s) { return s == null ? '' : String(s).replace(/&/g,'&amp;').replac
 function today() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function fmtDate(s) { if (!s) return ''; const p = s.slice(0,10).split('-'); return `${p[1]}月${parseInt(p[2])}日`; }
 function fmtMoney(n) { if (!n) return '¥0.00'; return '¥' + Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function fmtMoneyNum(n) { if (!n) return '0.00'; return Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function fmtDateShort(s) { if (!s) return ''; const p = s.slice(0,10).split('-'); return `${parseInt(p[1])}月${parseInt(p[2])}日`; }
 function monthStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
 
 // ⑫ 空状态 SVG 插画生成器
@@ -802,31 +1183,46 @@ function switchModule(mod, source) {
     btn.classList.toggle('active', btn.dataset.mod === mod);
   });
   const target = document.getElementById(`mod-${mod}`);
-  if (!target) return;
-  
+  if (!target && mod !== 'other') return;
+
   // 移除所有模块的 active，加上转场类
   document.querySelectorAll('.module').forEach(m => {
     m.classList.remove('active', 'from-tabbar');
   });
-  
-  // 强制 reflow 让动画重新触发
-  void target.offsetWidth;
-  target.classList.add('active');
-  if (lastNavSource === 'tabbar') target.classList.add('from-tabbar');
-  
+
+  if (mod === 'other') {
+    // 其他：合并展示「健身」+「待买」
+    ['fitness', 'wishlist'].forEach(m => {
+      const t = document.getElementById(`mod-${m}`);
+      if (!t) return;
+      void t.offsetWidth;
+      t.classList.add('active');
+      if (lastNavSource === 'tabbar') t.classList.add('from-tabbar');
+    });
+  } else {
+    // 强制 reflow 让动画重新触发
+    void target.offsetWidth;
+    target.classList.add('active');
+    if (lastNavSource === 'tabbar') target.classList.add('from-tabbar');
+  }
+
   // ⑦ 平滑滚动回顶
   const main = document.querySelector('.main');
   if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  
-  if (!loaded[mod]) {
-    loaded[mod] = true;
-    loadModule(mod);
-  }
+
+  // 统一刷新逻辑：总是重新加载当前模块
+  loadModule(mod);
 }
 
 function loadModule(mod) {
   const loaders = { overview: loadOverview, finance: loadFinance, habits: loadHabits, fitness: loadFitness, wishlist: loadWishlist, read: loadDailyRead };
+  if (mod === 'other') {
+    // 其他页：同时加载健身与待买
+    loadFitness();
+    loadWishlist();
+    return;
+  }
   if (loaders[mod]) loaders[mod]();
 }
 
@@ -932,6 +1328,7 @@ async function loadFinance() {
     
     renderFinanceList(expenses);
     renderDonutChart(expenses);
+    renderMonthChart(expenses);
 
   } catch(e) {
     console.error('Finance error:', e);
@@ -939,114 +1336,273 @@ async function loadFinance() {
   }
 }
 
+// 模块级变量 — 当前选中的分类
+let _activeFinanceCat = '全部';
+
 function renderFinanceList(expenses) {
-  const cats = ['全部','餐饮','交通','购物','娱乐','医疗','教育','工资','其他'];
-  let activeCat = '全部';
+  // 固定分类列表
+  const fixedCats = ['餐饮','交通','购物','娱乐','医疗','教育','工资','其他'];
+  // 从数据中提取所有实际存在的分类（含用户新增的）
+  const dataCats = [...new Set(expenses.map(e => e.category).filter(Boolean))];
+  const allCats = [...new Set([...fixedCats, ...dataCats])];
 
-  $('fn-chips').innerHTML = cats.map(c => `<button class="chip ${c===activeCat?'active':''}" onclick="filterFinance('${c}')">${c}</button>`).join('');
+  // 填充下拉菜单
+  const sel = $('fn-cat-filter');
+  if (sel && sel.options.length <= 1) {
+    // 只在首次或分类变化时重建
+    allCats.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      if (c === _activeFinanceCat) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+  // 同步选中状态
+  if (sel) sel.value = _activeFinanceCat;
 
-  const filtered = activeCat === '全部' ? expenses : expenses.filter(e => e.category === activeCat);
+  // 筛选
+  const filtered = _activeFinanceCat === '全部' ? expenses : expenses.filter(e => e.category === _activeFinanceCat);
 
-  $('fn-list').innerHTML = filtered.slice(0, 50).map(e => `
-    <div class="item">
-      <div class="item-body">
-        <div class="item-title">${esc(e.note || e.category)}</div>
-        <div class="item-meta">
-          <span class="tag ${e.type==='支出'?'tag-pink':'tag-sage'}">${e.type}</span>
-          <span>${fmtDate(e.date)}</span>
+  // 分类图标映射
+  const catIconMap = {
+    '餐饮': '🍽️', '交通': '🚗', '购物': '🛒', '娱乐': '🎮',
+    '医疗': '💊', '教育': '📚', '工资': '💰', '其他': '📌',
+  };
+  const catIcon = (cat) => catIconMap[cat] || '📌';
+
+  // 渲染列表 — 参考图2风格
+  $('fn-list').innerHTML = filtered.slice(0, 80).map(e => {
+    const isExpense = e.type === '支出';
+    const amtClass = isExpense ? 'fn-amt--exp' : 'fn-amt--inc';
+    const amtPrefix = isExpense ? '-' : '+';
+    const iconBg = isExpense ? '#F5E6D8' : '#E2EFEC';
+    return `
+      <div class="fn-item">
+        <div class="fn-item__icon" style="background:${iconBg}">${catIcon(e.category || '其他')}</div>
+        <div class="fn-item__body">
+          <div class="fn-item__name">${esc(e.note || e.category || '未命名')}</div>
+          <div class="fn-item__meta">${fmtDateShort(e.date)} · ${esc(e.category||'其他')} · ${e.type||'支出'}</div>
+        </div>
+        <div class="fn-item__right">
+          <span class="fn-item__amt ${amtClass}">${amtPrefix}¥${fmtMoneyNum(e.amount)}</span>
+          <button class="fn-item__del" onclick="deleteExpense('${e.id}')" title="删除">🗑</button>
         </div>
       </div>
-      <div class="item-actions">
-        <span class="stat-value" style="font-size:16px;">${e.type==='支出'?'':'sage'}${e.type==='支出'?'-':'+'}${fmtMoney(e.amount).slice(1)}</span>
-        <button class="linkbtn" onclick="deleteExpense('${e.id}')">删除</button>
-      </div>
-    </div>
-  `).join('') || emptyState('wallet', '还没有记账记录', '点「记一笔」开始记录收支吧', '记一笔', "$('fn-panel').classList.add('open')");
-}
-
-// ⑥ 甜甜圈图 — 交互式消费结构
-function renderDonutChart(expenses) {
-  const canvas = $('fn-pie');
-  if (!canvas) return;
-  const m = monthStr();
-  const expByCat = {};
-  expenses.filter(e => (e.date||'').startsWith(m) && e.type === '支出').forEach(e => {
-    const cat = e.category || '其他';
-    expByCat[cat] = (expByCat[cat] || 0) + Number(e.amount);
-  });
-  const total = Object.values(expByCat).reduce((a,b) => a+b, 0);
-  const entries = Object.entries(expByCat).sort((a,b) => b[1]-a[1]);
-  const colors = ['#C4704B','#6B8E7B','#C9A84C','#D4A0A0','#7A9BB5','#B23A3A','#9A9085'];
-  canvas.innerHTML = '';
-  if (entries.length === 0) { canvas.innerHTML = '<span style="font-size:13px;color:var(--ink-faint);">暂无支出数据</span>'; return; }
-
-  const size = 200;
-  const center = size / 2;
-  const outerR = 85, innerR = 55;
-  const ns = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('width', size); svg.setAttribute('height', size);
-  svg.style.width = '100%'; svg.style.maxWidth = '200px'; svg.style.margin = '0 auto';
-
-  entries.forEach(([cat, amt], i) => {
-    const pct = total > 0 ? amt / total : 0;
-    const angle = pct * 2 * Math.PI;
-    const startAngle = i > 0 ? entries.slice(0, i).reduce((s,e) => s + (total > 0 ? e[1]/total : 0) * 2 * Math.PI, 0) : 0;
-    const r1 = outerR, r2 = innerR;
-    const x1 = center + r1 * Math.cos(startAngle - Math.PI/2);
-    const y1 = center + r1 * Math.sin(startAngle - Math.PI/2);
-    const x2 = center + r2 * Math.cos(startAngle - Math.PI/2);
-    const y2 = center + r2 * Math.sin(startAngle - Math.PI/2);
-    const x3 = center + r2 * Math.cos(startAngle - angle - Math.PI/2);
-    const y3 = center + r2 * Math.sin(startAngle - angle - Math.PI/2);
-    const x4 = center + r1 * Math.cos(startAngle - angle - Math.PI/2);
-    const y4 = center + r1 * Math.sin(startAngle - angle - Math.PI/2);
-    const largeArc = angle > Math.PI ? 1 : 0;
-    const path = `${x1},${y1} A ${r1},${r1} 0 ${largeArc},0 ${x4},${y4} L ${x3},${y3} A ${r2},${r2} 0 ${largeArc},1 ${x2},${y2} Z`;
-    const pathEl = document.createElementNS(ns, 'path');
-    pathEl.setAttribute('d', path);
-    pathEl.setAttribute('fill', colors[i % colors.length]);
-    pathEl.setAttribute('stroke', '#fff');
-    pathEl.setAttribute('stroke-width', '2');
-    pathEl.style.cursor = 'pointer';
-    pathEl.style.transition = 'opacity 0.2s';
-    pathEl.title = `${cat}：${fmtMoney(amt)} (${Math.round(pct*100)}%)`;
-    pathEl.addEventListener('mouseenter', () => pathEl.style.opacity = '0.7');
-    pathEl.addEventListener('mouseleave', () => pathEl.style.opacity = '1');
-    svg.appendChild(pathEl);
-  });
-
-  // 中心文字
-  const text = document.createElementNS(ns, 'text');
-  text.setAttribute('x', center); text.setAttribute('y', center - 6);
-  text.setAttribute('text-anchor', 'middle'); text.setAttribute('fill', 'var(--ink)');
-  text.setAttribute('font-size', '13'); text.setAttribute('font-weight', '600');
-  text.textContent = fmtMoney(total).replace('¥','');
-  svg.appendChild(text);
-  const sub = document.createElementNS(ns, 'text');
-  sub.setAttribute('x', center); sub.setAttribute('y', center + 12);
-  sub.setAttribute('text-anchor', 'middle'); sub.setAttribute('fill', 'var(--ink-faint)');
-  sub.setAttribute('font-size', '11');
-  sub.textContent = '本月支出';
-  svg.appendChild(sub);
-
-  // 挂载前先清空画布（移除旧 svg 与旧图例）
-  canvas.innerHTML = '';
-  canvas.style.cssText = 'height:auto;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;';
-  canvas.appendChild(svg);
-
-  // 图例（svg 挂载后再插入，父节点必存在）
-  entries.forEach(([cat, amt], i) => {
-    const div = document.createElement('div');
-    div.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);margin-top:4px;width:100%;max-width:200px;';
-    div.innerHTML = `<span style="width:10px;height:10px;border-radius:3px;background:${colors[i%colors.length]};flex-shrink:0;"></span><span>${cat}</span><span style="margin-left:auto;color:var(--ink-faint);">${fmtMoney(amt)} · ${Math.round(amt/total*100)}%</span>`;
-    canvas.appendChild(div);
-  });
+    `;
+  }).join('') || '<div class="fn-empty">还没有记账记录，点「记一笔」开始吧</div>';
 }
 
 function filterFinance(cat) {
-  document.querySelectorAll('#fn-chips .chip').forEach(c => c.classList.toggle('active', c.textContent === cat));
-  loadFinance();
+  _activeFinanceCat = cat;
+  // 不重新 loadFinance（避免闪烁），只重新渲染列表
+  sbQuery('expenses', { order: 'date desc', limit: 200 }).then(expenses => {
+    renderFinanceList(expenses);
+  });
+}
+
+// ⑥ 消费结构 — CSS 环形图 + 分类明细表格（可靠渲染，不依赖 SVG path）
+function renderDonutChart(expenses) {
+  var canvas = $('fn-pie');
+  if (!canvas) return;
+  var m = monthStr();
+  var expByCat = {};
+  expenses.filter(function(e){ return (e.date||'').startsWith(m) && e.type === '\u652f\u51fa'; }).forEach(function(e) {
+    var cat = e.category || '\u5176\u4ed6';
+    expByCat[cat] = (expByCat[cat] || 0) + Number(e.amount);
+  });
+  var total = Object.values(expByCat).reduce(function(a,b){ return a+b; }, 0);
+  var entries = Object.entries(expByCat).sort(function(a,b){ return b[1]-a[1]; });
+  var colors = ['#C4704B','#6B8E7B','#C9A84C','#D4A0A0','#7A9BB5','#B23A3A','#9A9085','#5B8DBE','#8B7355'];
+
+  canvas.innerHTML = '';
+  if (entries.length === 0) { canvas.innerHTML = '<div style="text-align:center;padding:32px 0;color:var(--ink-faint);font-size:13px;">\u6682\u65e0\u652f\u51fa\u6570\u636e</div>'; return; }
+
+  // --- 构建 conic-gradient 色带 ---
+  var gradientParts = [];
+  var cumPct = 0;
+  entries.forEach(function(catAmt, i) {
+    var pct = total > 0 ? catAmt[1] / total : 0;
+    var start = cumPct * 100;
+    var end = (cumPct + pct) * 100;
+    gradientParts.push(colors[i % colors.length] + ' ' + start.toFixed(1) + '% ' + end.toFixed(1) + '%');
+    cumPct += pct;
+  });
+
+  // --- 环形图容器 ---
+  var ringWrap = document.createElement('div');
+  ringWrap.style.cssText = 'position:relative;width:140px;height:140px;margin:0 auto 16px;flex-shrink:0;';
+
+  var ring = document.createElement('div');
+  ring.style.cssText = 'width:100%;height:100%;border-radius:50%;background:conic-gradient(' + gradientParts.join(',') + ');position:relative;';
+  // 中心镂空（用伪元素或内圈 div）
+  var inner = document.createElement('div');
+  inner.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:84px;height:84px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+  inner.innerHTML = '<span style="font-size:15px;font-weight:700;color:var(--ink);">' + fmtMoney(total).replace('\u00a5','') + '</span><span style="font-size:10px;color:var(--ink-faint);margin-top:1px;">\u672c\u6708\u652f\u51fa</span>';
+  ring.appendChild(inner);
+  ringWrap.appendChild(ring);
+  canvas.appendChild(ringWrap);
+
+  // --- 分类明细表格 ---
+  var table = document.createElement('div');
+  table.style.cssText = 'width:100%;display:flex;flex-direction:column;gap:0;';
+
+  // 表头
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:11px;color:var(--ink-faint);font-weight:500;';
+  hdr.innerHTML = '<span style="flex:1;">\u5206\u7c7b</span><span style="width:60px;text-align:right;">\u91d1\u989d</span><span style="width:42px;text-align:right;">\u5360\u6bd4</span>';
+  table.appendChild(hdr);
+
+  entries.forEach(function(catAmt, i) {
+    var cat = catAmt[0], amt = catAmt[1];
+    var pct = total > 0 ? amt / total : 0;
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.04);';
+
+    var dot = '<span style="width:8px;height:8px;border-radius:50%;background:' + colors[i%colors.length] + ';flex-shrink:0;display:inline-block;margin-right:6px;"></span>';
+
+    // 进度条
+    var barW = Math.max(pct * 100, 3);
+    var barBg = '<span style="flex:1;height:4px;background:#f0ece8;border-radius:2px;margin:0 8px;overflow:hidden;display:block;"><span style="display:block;width:' + barW + '%;height:100%;background:' + colors[i%colors.length] + ';border-radius:2px;min-width:4px;"></span></span>';
+
+    row.innerHTML = '<span style="flex:1;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;">' + dot + esc(cat) + '</span>'
+      + '<span style="width:64px;text-align:right;font-size:13px;font-weight:600;color:var(--ink);">' + fmtMoney(amt) + '</span>'
+      + '<span style="width:44px;text-align:right;font-size:12px;color:var(--ink-faint);">' + Math.round(pct*100) + '%</span>';
+
+    table.appendChild(row);
+  });
+
+  // 合计行
+  var totalRow = document.createElement('div');
+  totalRow.style.cssText = 'display:flex;align-items:center;padding:10px 0 0;font-size:13px;font-weight:600;color:var(--ink);border-top:1px solid var(--line);margin-top:4px;';
+  totalRow.innerHTML = '<span style="flex:1;">\u5408\u8ba1</span><span style="width:64px;text-align:right;">' + fmtMoney(total) + '</span><span style="width:44px;"></span>';
+  table.appendChild(totalRow);
+
+  canvas.appendChild(table);
+}
+
+// ⑦ 月度对比 — 精致柱状图（近6个月收支对比）
+function renderMonthChart(expenses) {
+  var container = $('fn-month');
+  if (!container) return;
+  container.innerHTML = '';
+
+  var months = [];
+  for (var mi = 5; mi >= 0; mi--) {
+    var dd = new Date();
+    dd.setMonth(dd.getMonth() - mi);
+    months.push(dd.getFullYear() + '-' + String(dd.getMonth()+1).padStart(2,'0'));
+  }
+
+  var data = months.map(function(m) {
+    return {
+      label: m.slice(5) + '\u6708',
+      expense: expenses.filter(function(e){ return (e.date||'').startsWith(m) && e.type === '\u652f\u51fa'; }).reduce(function(s,e){ return s + (Number(e.amount)||0); }, 0),
+      income: expenses.filter(function(e){ return (e.date||'').startsWith(m) && e.type === '\u6536\u5165'; }).reduce(function(s,e){ return s + (Number(e.amount)||0); }, 0)
+    };
+  });
+
+  var maxVal = Math.max(100, data.reduce(function(mx,d){ return Math.max(mx, d.expense, d.income); }, 1));
+
+  var ns = 'http://www.w3.org/2000/svg';
+  var W = 320, H = 180, padL = 32, padR = 12, padT = 16, padB = 28;
+  var chartW = W - padL - padR, chartH = H - padT - padB;
+  var groupW = chartW / months.length;
+  var barW = Math.max(10, Math.min(18, groupW * 0.3));
+  var gap = (groupW - barW * 2) / 3;
+
+  var svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.setAttribute('width', '100%');
+  svg.style.height = H + 'px';
+  svg.style.display = 'block';
+
+  // 背景网格线
+  for (var li = 0; li <= 4; li++) {
+    var ly = padT + chartH - (li/4)*chartH;
+    var line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', padL); line.setAttribute('y1', ly);
+    line.setAttribute('x2', W-padR); line.setAttribute('y2', ly);
+    line.setAttribute('stroke', '#f0ece8'); line.setAttribute('stroke-width', '1');
+    svg.appendChild(line);
+    // Y轴标签
+    var yLbl = document.createElementNS(ns, 'text');
+    yLbl.setAttribute('x', padL - 6); yLbl.setAttribute('y', ly + 3);
+    yLbl.setAttribute('text-anchor', 'end'); yLbl.setAttribute('fill', '#bbb');
+    yLbl.setAttribute('font-size', '9');
+    yLbl.textContent = fmtMoney(Math.round(maxVal * li / 4));
+    svg.appendChild(yLbl);
+  }
+
+  // 基线
+  var baseLine = document.createElementNS(ns, 'line');
+  baseLine.setAttribute('x1', padL); baseLine.setAttribute('y1', padT + chartH);
+  baseLine.setAttribute('x2', W-padR); baseLine.setAttribute('y2', padT + chartH);
+  baseLine.setAttribute('stroke', '#ddd'); baseLine.setAttribute('stroke-width', '1');
+  svg.appendChild(baseLine);
+
+  data.forEach(function(d, i) {
+    var cx = padL + groupW * i + groupW / 2;
+    var eh = Math.max(2, (d.expense/maxVal)*chartH);
+    var ih = Math.max(2, (d.income/maxVal)*chartH);
+
+    // 支出柱
+    var er = document.createElementNS(ns, 'rect');
+    er.setAttribute('x', cx - barW - gap/2);
+    er.setAttribute('y', padT + chartH - eh);
+    er.setAttribute('width', barW); er.setAttribute('height', eh);
+    er.setAttribute('rx', '3'); er.setAttribute('ry', '3');
+    er.setAttribute('fill', '#C4704B');
+    er.setAttribute('opacity', d.expense > 0 ? '1' : '0.12');
+    er.title = d.label + ' \u652f\u51fa: ' + fmtMoney(d.expense);
+    svg.appendChild(er);
+    if (d.expense > 0) {
+      var eVal = document.createElementNS(ns, 'text');
+      eVal.setAttribute('x', cx - barW/2 - gap/2);
+      eVal.setAttribute('y', padT + chartH - eh - 4);
+      eVal.setAttribute('text-anchor', 'middle');
+      eVal.setAttribute('fill', '#C4704B'); eVal.setAttribute('font-size', '9');
+      eVal.setAttribute('font-weight', '600');
+      eVal.textContent = d.expense >= 1000 ? (d.expense/1000).toFixed(1)+'k' : String(Math.round(d.expense));
+      svg.appendChild(eVal);
+    }
+
+    // 收入柱
+    var ir = document.createElementNS(ns, 'rect');
+    ir.setAttribute('x', cx + gap/2);
+    ir.setAttribute('y', padT + chartH - ih);
+    ir.setAttribute('width', barW); ir.setAttribute('height', ih);
+    ir.setAttribute('rx', '3'); ir.setAttribute('ry', '3');
+    ir.setAttribute('fill', '#6B8E7B');
+    ir.setAttribute('opacity', d.income > 0 ? '1' : '0.12');
+    ir.title = d.label + ' \u6536\u5165: ' + fmtMoney(d.income);
+    svg.appendChild(ir);
+    if (d.income > 0) {
+      var iVal = document.createElementNS(ns, 'text');
+      iVal.setAttribute('x', cx + barW/2 + gap/2);
+      iVal.setAttribute('y', padT + chartH - ih - 4);
+      iVal.setAttribute('text-anchor', 'middle');
+      iVal.setAttribute('fill', '#6B8E7B'); iVal.setAttribute('font-size', '9');
+      iVal.setAttribute('font-weight', '600');
+      iVal.textContent = d.income >= 1000 ? (d.income/1000).toFixed(1)+'k' : String(Math.round(d.income));
+      svg.appendChild(iVal);
+    }
+
+    // X轴月份标签
+    var lbl = document.createElementNS(ns, 'text');
+    lbl.setAttribute('x', cx); lbl.setAttribute('y', H - 7);
+    lbl.setAttribute('text-anchor', 'middle'); lbl.setAttribute('fill', '#999');
+    lbl.setAttribute('font-size', '11');
+    lbl.textContent = d.label;
+    svg.appendChild(lbl);
+  });
+
+  container.appendChild(svg);
+
+  var legend = document.createElement('div');
+  legend.style.cssText = 'display:flex;justify-content:center;gap:18px;margin-top:10px;font-size:11px;color:var(--ink-soft);';
+  legend.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#C4704B;"></span>\u652f\u51fa</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#6B8E7B;"></span>\u6536\u5165</span>';
+  container.appendChild(legend);
 }
 
 async function deleteExpense(id) {
@@ -1076,33 +1632,83 @@ async function loadHabits() {
       const done = rec?.checked || false;
       const cnt = rec?.count || 0;
       const val = rec?.value || 0;
-      
+      const icon = habitIcon(h.name, h.type);
+      const goalLabel = h.type === 'check' ? (h.goal || '每日打卡') : h.type === 'count' ? `目标: ${h.goal || '-'}${h.unit || '次'}` : `目标: ${h.goal || '-'}`;
+
       return `
-        <div class="card fade-in">
-          <div style="display:flex;align-items:center;justify-content:space-between;">
-            <div>
-              <div class="item-title">${esc(h.name)}</div>
-              <div class="item-meta">
-                <span class="tag tag-blue">${h.type}</span>
-                <span>${done ? '✅ 已完成' : '⏳ 待完成'}</span>
-              </div>
+        <div class="habit-card fade-in" onclick="handleHabitTap('${h.id}','${todayStr}','${h.type}',this)">
+          <div class="habit-card__icon">${icon}</div>
+          <div class="habit-card__info">
+            <div class="habit-card__name">${esc(h.name)}</div>
+            <div class="habit-card__goal">${goalLabel}</div>
+          </div>
+          ${h.type === 'check' ? `
+            <div class="habit-check ${done?'habit-check--done':''}" data-done="${done}">
+              <svg class="habit-check__circle" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/>
+                ${done ? '<path class="habit-check__tick" d="M7 12l3 3 7-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' : ''}
+              </svg>
             </div>
-            <button class="linkbtn" onclick="deleteHabit('${h.id}')">删除</button>
-          </div>
-          <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
-            ${h.type === 'check' ? `<button class="btn btn-sm ${done?'btn-primary':''}" onclick="checkHabit('${h.id}','${todayStr}')">${done?'已完成':'打卡'}</button>` : 
-              h.type === 'count' ? `<button class="btn btn-sm" onclick="incHabit('${h.id}','${todayStr}',-1)">-</button><span style="font-size:18px;font-weight:600;min-width:40px;text-align:center;">${cnt}</span><button class="btn btn-sm btn-primary" onclick="incHabit('${h.id}','${todayStr}',1)">+</button>` :
-              `<input type="number" id="val-${h.id}" value="${val}" style="width:100px;display:inline-block;"><button class="btn btn-sm btn-primary" onclick="saveVal('${h.id}','${todayStr}')">保存</button>`}
-          </div>
+          ` : h.type === 'count' ? `
+            <div class="habit-count-wrap">
+              <button class="habit-count-btn" onclick="event.stopPropagation();incHabit('${h.id}','${todayStr}',-1)">−</button>
+              <span class="habit-count-num">${cnt}<small>${h.unit||'次'}</small></span>
+              <button class="habit-count-btn" onclick="event.stopPropagation();incHabit('${h.id}','${todayStr}',1)">+</button>
+            </div>
+          ` : `
+            <input class="habit-val-input" id="val-${h.id}" value="${val}" onclick="event.stopPropagation()" onblur="saveVal('${h.id}','${todayStr}')" />
+          `}
         </div>
       `;
     }).join('') : emptyState('check', '还没有习惯', '点「新增习惯」添加你的第一个习惯吧', '新增习惯', "$('habit-panel').classList.add('open')");
     
-    renderHeatmap(records);
+    renderHeatmap(records, habits);
     
   } catch(e) {
     console.error('Habits error:', e);
     showBanner('习惯数据加载失败');
+  }
+}
+
+// 习惯图标映射
+function habitIcon(name, type) {
+  const map = {
+    '早起': '🌅', '起床': '🌅', '睡眠': '😴', '睡觉': '😴',
+    '喝水': '💧', '饮水': '💧',
+    '运动': '🏃', '跑步': '🏃‍♂️', '健身': '💪', '瑜伽': '🧘',
+    '阅读': '📖', '读书': '📚', '学习': '📝',
+    '冥想': '🧘‍♀️', '冥想': '🧘',
+    '写作': '✍️', '日记': '📔',
+    '英语': '🌍', '背单词': '📖',
+    '理财': '💰', '记账': '🧾',
+    '散步': '🚶', '步行': '🚶‍♂️',
+    '早餐': '🥣', '午餐': '🍱', '晚餐': '🍽️',
+    '水果': '🍎', '蔬菜': '🥬',
+    '护肤': '✨', '护发': '💇',
+    '练字': '🖊️', '书法': '✒️',
+    '弹琴': '🎹', '吉他': '🎸', '唱歌': '🎤',
+    '画画': '🎨', '摄影': '📷',
+    '整理': '🗂️', '打扫': '🧹',
+    '感恩': '🙏', '反省': '🤔',
+    '社交': '👋', '打电话': '📞',
+    '戒糖': '🚫', '戒烟': '🚭', '戒酒': '🍺',
+  };
+  // 精确匹配
+  if (map[name]) return map[name];
+  // 模糊匹配关键词
+  for (const [k, v] of Object.entries(map)) {
+    if (name.includes(k) || k.includes(name)) return v;
+  }
+  // 按类型默认图标
+  const defaults = { check: '✅', count: '🔢', value: '📊' };
+  return defaults[type] || '📌';
+}
+
+async function handleHabitTap(habitId, date, type, el) {
+  if (type === 'check') { await checkHabit(habitId, date); }
+  else if (type === 'value') {
+    const input = el.querySelector('.habit-val-input');
+    if (input) { input.focus(); input.select(); }
   }
 }
 
@@ -1149,45 +1755,77 @@ async function deleteHabit(id) {
   catch(e) { toast('删除失败'); }
 }
 
-function renderHeatmap(records) {
-  const today = new Date();
-  const days = 30;
-  const heatmap = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today); d.setDate(d.getDate() - i);
-    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const dayRecs = records.filter(r => r.date === ds);
-    const cnt = dayRecs.filter(r => r.checked).length;
-    heatmap.push({ date: ds, count: cnt, total: dayRecs.length, dow: d.getDay(), month: d.getMonth(), day: d.getDate() });
+function renderHeatmap(records, habits) {
+  const now = new Date();
+  const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const todayStr = ymd(now);
+
+  // 从当月1号开始，到今天为止
+  const dateArr = [];
+  for (let d = new Date(now.getFullYear(), now.getMonth(), 1); d <= now; d.setDate(d.getDate() + 1)) {
+    const ds = ymd(new Date(d)); // 快照，避免引用问题
+    dateArr.push({ ds, day: new Date(d).getDate(), isToday: ds === todayStr });
   }
-  const maxCnt = Math.max(...heatmap.map(d => d.total), 1);
-  
-  // 月份标签（找每个月第一天的位置）
-  const monthLabels = [];
-  let lastMonth = -1;
-  heatmap.forEach((d, i) => {
-    if (d.month !== lastMonth) {
-      monthLabels.push({ idx: i, label: `${d.month + 1}月` });
-      lastMonth = d.month;
-    }
-  });
-  const monthsEl = $('heatmap-months');
-  if (monthsEl) {
-    // 简化：显示起始月和结束月
-    const firstMonth = heatmap[0].month + 1;
-    const lastMonthNum = heatmap[heatmap.length - 1].month + 1;
-    if (firstMonth === lastMonthNum) {
-      monthsEl.innerHTML = `<span></span><span style="color:var(--ink-soft);">${firstMonth}月</span><span></span>`;
-    } else {
-      monthsEl.innerHTML = `<span>${firstMonth}月</span><span></span><span>${lastMonthNum}月</span>`;
-    }
+  const days = dateArr.length;
+
+  // 渲染日期标题行 — 每天都显示数字
+  const datesEl = $('hm-dates');
+  if (datesEl) {
+    datesEl.innerHTML = dateArr.map(d =>
+      `<span class="hm-date-cell">${d.day}</span>`
+    ).join('');
   }
-  
-  $('habit-heatmap').innerHTML = heatmap.map(d => {
-    const lvl = d.total === 0 ? '' : d.count/maxCnt > 0.8 ? 'l4' : d.count/maxCnt > 0.5 ? 'l3' : d.count/maxCnt > 0.2 ? 'l2' : 'l1';
-    const tip = `${d.date}：打卡 ${d.count} 项`;
-    return `<div class="heat-cell ${lvl}" data-tip="${tip}" title="${tip}"></div>`;
+
+  // 如果没传 habits
+  if (!habits || !habits.length) {
+    const rowsEl = $('hm-rows');
+    if (rowsEl) rowsEl.innerHTML = '<div style="color:var(--ink-faint);font-size:13px;padding:20px 0;text-align:center;">暂无打卡数据</div>';
+    return;
+  }
+
+  // 按习惯分行渲染
+  const bodyEl = $('hm-rows');
+  if (!bodyEl) return;
+
+  bodyEl.innerHTML = habits.map(h => {
+    const icon = habitIcon(h.name, h.type);
+    let doneDays = 0;
+    const cells = dateArr.map(d => {
+      const rec = records.find(r => r.habit_id === h.id && r.date === d.ds);
+      const done = h.type === 'check' ? !!rec?.checked : h.type === 'count' ? (rec?.count > 0) : (rec?.value > 0);
+      if (done) doneDays++;
+      let lvl = done ? (d.isToday ? 'l4' : 'l3') : 'l0';
+      const tip = `${d.ds} ${esc(h.name)}${done ? ' ✓' : ''}`;
+      return `<span class="hm-cell ${lvl} ${d.isToday ? 'today' : ''}" data-tip="${tip}" title="${tip}"></span>`;
+    }).join('');
+
+    return `
+      <div class="hm-row">
+        <div class="hm-row-label"><span class="hm-icon">${icon}</span><span class="hm-name">${esc(h.name)}</span></div>
+        <div class="hm-cells">${cells}</div>
+        <div class="hm-row-count">${doneDays}天</div>
+      </div>
+    `;
   }).join('');
+
+  // 底部统计
+  let statsEl = $('hm-stats');
+  if (!statsEl) {
+    statsEl = document.createElement('div');
+    statsEl.id = 'hm-stats';
+    statsEl.className = 'hm-stats';
+    bodyEl.parentNode.appendChild(statsEl);
+  }
+  const hasRecord = (ds) => records.some(r => habits.some(h => h.id === r.habit_id && r.date === ds && (h.type === 'check' ? !!r.checked : h.type === 'count' ? (r.count || 0) > 0 : (r.value || 0) > 0)));
+  const daysWithCheck = dateArr.filter(d => hasRecord(d.ds)).length;
+  const totalChecks = records.filter(r => dateArr.some(d => d.ds === r.date)).length;
+  let streak = 0;
+  for (let i = dateArr.length - 1; i >= 0; i--) { if (hasRecord(dateArr[i].ds)) streak++; else break; }
+  statsEl.innerHTML = `<div class="hm-stat"><div class="hm-stat-val">${streak}</div><div class="hm-stat-lbl">连续打卡</div></div><div class="hm-stat"><div class="hm-stat-val">${daysWithCheck}</div><div class="hm-stat-lbl">活跃天数</div></div><div class="hm-stat"><div class="hm-stat-val">${totalChecks}</div><div class="hm-stat-lbl">总打卡</div></div>`;
+
+  // 更新天数显示
+  const cntEl = $('hm-day-count');
+  if (cntEl) cntEl.textContent = days;
 }
 
 // ============================================================
@@ -1208,7 +1846,7 @@ async function loadFitness() {
       { label: '当前体重', value: latest.weight ? `${latest.weight}kg` : '--', cls: 'accent' },
       { label: '体脂率', value: latest.body_fat ? `${latest.body_fat}%` : '--', cls: 'sage' },
       { label: 'BMI', value: bmi, cls: 'gold' },
-      { label: '本周运动', value: `${plans.length}次`, cls: 'pink' }
+      { label: '计划总数', value: `${plans.length}项`, cls: 'pink' }
     ].map(s => `<div class="stat ${s.cls}"><div class="stat-label">${s.label}</div><div class="stat-value">${s.value}</div></div>`).join('');
     
     renderWeightChart(records.slice(0, 7).reverse());
@@ -1374,7 +2012,9 @@ async function loadWishlist() {
 }
 
 function filterWL(f) {
-  document.querySelectorAll('#wl-chips .chip').forEach(c => c.classList.toggle('active', c.textContent === f));
+  const btns = document.querySelectorAll('#wl-chips .chip');
+  btns.forEach(c => c.classList.remove('active'));
+  btns.forEach(c => { if (c.textContent.trim() === f) c.classList.add('active'); });
   loadWishlist();
 }
 
@@ -1543,22 +2183,38 @@ function renderReadContent(tab, data) {
     };
 
     c.innerHTML = `
-      <div class="news-tabs" id="news-tabs">
-        ${available.map((d,i) => `<button class="news-tab ${i===0?'active':''}" data-sec="${esc(d.name)}" style="--section-color:${d.color};">
-          <svg viewBox="0 0 24 24">${d.icon}</svg>
-          <span>${esc(d.name)}</span>
-          <span class="tab-count">${sections[d.name].length}</span>
-        </button>`).join('')}
+      <div class="news-mag">
+        <!-- 左侧板块导航 -->
+        <aside class="news-mag__nav">
+          ${available.map((d,i) => {
+            const short = {'今日热点':'热点','公司头条':'头条','财经速览':'财经','时事追踪':'时事'}[d.name]||d.name;
+            return `
+            <button class="news-mag__item ${i===0?'active':''}" data-sec="${esc(d.name)}" style="--sec-color:${d.color};">
+              <span class="news-mag__icon"><svg viewBox="0 0 24 24">${d.icon}</svg></span>
+              <span class="news-mag__name">${esc(d.name)}</span>
+              <span class="news-mag__short">${esc(short)}</span>
+              <span class="news-mag__count">${sections[d.name].length}</span>
+            </button>`;
+          }).join('')}
+        </aside>
+        <!-- 右侧内容区 -->
+        <main class="news-mag__content" id="news-section-body">
+          ${renderSection(activeSection)}
+        </main>
       </div>
-      <div id="news-section-body">${renderSection(activeSection)}</div>
     `;
 
-    // 板块 Tab 切换
-    c.querySelectorAll('.news-tab').forEach(btn => {
+    // 板块切换
+    c.querySelectorAll('.news-mag__item').forEach(btn => {
       btn.addEventListener('click', () => {
-        c.querySelectorAll('.news-tab').forEach(t => t.classList.remove('active'));
+        c.querySelectorAll('.news-mag__item').forEach(t => t.classList.remove('active'));
         btn.classList.add('active');
-        $('news-section-body').innerHTML = renderSection(btn.dataset.sec);
+        const body = $('news-section-body');
+        body.style.opacity = '0';
+        setTimeout(() => {
+          body.innerHTML = renderSection(btn.dataset.sec);
+          body.style.opacity = '1';
+        }, 120);
       });
     });
 
@@ -1810,7 +2466,7 @@ function bindEvents() {
     const day = parseInt($('plan-day').value);
     if (!exercise) { toast('请输入运动项目'); return; }
     try {
-      await sbInsert('workout_plans', { exercise, day, week: day, created_at: new Date().toISOString() });
+      await sbInsert('workout_plans', { exercise, day, created_at: new Date().toISOString() });
       $('plan-exercise').value = ''; toast('已添加'); await loadFitness();
     } catch(e) { toast('保存失败：' + (e.message||e)); }
   });
