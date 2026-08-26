@@ -150,6 +150,64 @@ label { font-size: 12px; color: var(--ink-soft); display: block; margin-bottom: 
 .linkbtn { background: none; border: none; color: var(--ink-faint); cursor: pointer; font-size: 12px; padding: 4px 6px; border-radius: 4px; }
 .linkbtn:hover { color: var(--accent); text-decoration: underline; }
 
+/* ═══ 记账列表 — 新版（参考图2风格） ═══ */
+.fn-list-header { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 10px; }
+.fn-list-title { font-size: 18px; font-weight: 700; color: var(--ink); margin: 0; }
+.fn-cat-select {
+  padding: 7px 28px 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.fn-cat-select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.fn-list { display: flex; flex-direction: column; }
+.fn-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.15s;
+}
+.fn-item:last-child { border-bottom: none; }
+.fn-item:hover { background: var(--paper-2); border-radius: 10px; }
+
+/* 左侧图标 */
+.fn-item__icon {
+  width: 42px; height: 42px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+
+/* 中间信息 */
+.fn-item__body { flex: 1; min-width: 0; }
+.fn-item__name { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+.fn-item__meta { font-size: 12px; color: var(--ink-faint); }
+
+/* 右侧金额+删除 */
+.fn-item__right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.fn-item__amt { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fn-item__amt--exp { color: #D94545; }
+.fn-item__amt--inc { color: #3A9B5A; }
+.fn-item__del {
+  background: none; border: none; cursor: pointer;
+  font-size: 15px; padding: 4px; border-radius: 6px;
+  opacity: 0.35; transition: opacity 0.15s, transform 0.15s;
+  line-height: 1;
+}
+.fn-item__del:hover { opacity: 1; transform: scale(1.15); }
+
+.fn-empty { text-align: center; padding: 36px 0; color: var(--ink-faint); font-size: 13px; }
+
 /* 标签 */
 .tag { display: inline-block; font-size: 11px; padding: 2px 9px; border-radius: 12px; background: var(--paper-3); color: var(--ink-soft); }
 .tag-pink { background: var(--pink-soft); color: var(--pink); }
@@ -199,28 +257,54 @@ label { font-size: 12px; color: var(--ink-soft); display: block; margin-bottom: 
 .chart-area { height: 180px; position: relative; }
 canvas { width: 100% !important; height: 100% !important; }
 
-/* ⑤ 热力图 — 打卡日历卡片 */
-.heatmap-wrap { position: relative; padding: 8px 0 0 0; }
-.heatmap-months { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-faint); margin-bottom: 6px; }
-.heatmap { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
-.heat-cell { aspect-ratio: 1.1; border-radius: 6px; background: var(--paper-2); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; color: var(--ink-faint); transition: all 0.15s; cursor: pointer; position: relative; border: 1px solid transparent; }
-.heat-cell:hover { transform: scale(1.15); z-index: 2; box-shadow: 0 2px 8px rgba(61,50,41,0.12); border-color: var(--line); }
-.heat-cell .hc-day { font-size: 10px; font-weight: 500; line-height: 1; }
-.heat-cell .hc-dot { width: 5px; height: 5px; border-radius: 50%; margin-top: 2px; background: transparent; }
-.heat-cell.l1 .hc-dot { background: #D4E4DA; }
-.heat-cell.l2 .hc-dot { background: #A8C9B6; }
-.heat-cell.l3 .hc-dot { background: #6B8E7B; }
-.heat-cell.l4 { background: #E8F5E9; border-color: #6B8E7B; }
-.heat-cell.l4 .hc-day { color: #4A7A5E; font-weight: 700; }
-.heat-cell.l4 .hc-dot { background: #4A7A5E; width: 6px; height: 6px; }
-.heat-cell.today { background: #FFF8E1; border-color: #C9A84C; }
-.heat-cell.today .hc-day { color: #B8860B; font-weight: 700; }
-.heat-cell.empty { opacity: 0.35; }
-.heat-cell[data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; font-size: 10px; padding: 3px 6px; border-radius: 4px; white-space: nowrap; z-index: 10; pointer-events: none; }
-.heatmap-stats { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
-.heatmap-stat { text-align: center; }
-.heatmap-stat-val { font-size: 16px; font-weight: 700; color: var(--ink); }
-.heatmap-stat-lbl { font-size: 10px; color: var(--ink-faint); margin-top: 1px; }
+/* ⑤ 热力图 — 按习惯分行的打卡矩阵（参考 GitHub 贡献图风格） */
+.heatmap-section { margin-top: 20px; }
+.heatmap-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.heatmap-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+.heatmap-title span { color: var(--accent); }
+.heatmap-hint { font-size: 11px; color: var(--ink-faint); }
+.heatmap-motto { font-size: 16px; font-weight: 700; color: var(--ink); margin: 12px 0 14px; letter-spacing: 1px; }
+
+.hm-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
+.hm-grid-wrap::-webkit-scrollbar { height: 4px; }
+.hm-grid-wrap::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+
+/* 日期标题行 — 每天显示数字 */
+.hm-date-row { display: flex; gap: 3px; min-width: max-content; padding-left: 72px; margin-bottom: 4px; }
+.hm-date-cell { width: 26px; text-align: center; font-size: 10px; color: var(--ink-faint); line-height: 1; flex-shrink: 0; }
+.hm-stats { display: flex; justify-content: space-around; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.hm-stat { text-align: center; }
+.hm-stat-val { font-size: 16px; font-weight: 700; color: var(--ink); }
+.hm-stat-lbl { font-size: 10px; color: var(--ink-faint); margin-top: 2px; }
+
+/* 习惯行 */
+.hm-body { display: flex; flex-direction: column; gap: 6px; }
+.hm-row { display: flex; align-items: center; gap: 3px; min-width: max-content; }
+.hm-row-label { width: 64px; flex-shrink: 0; display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; color: var(--ink); }
+.hm-row-label .hm-icon { font-size: 15px; flex-shrink: 0; }
+.hm-row-label .hm-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-row-count { font-size: 11px; color: var(--ink-faint); margin-left: auto; flex-shrink: 0; min-width: 28px; text-align: right; }
+
+/* 格子 */
+.hm-cells { display: flex; gap: 3px; }
+.hm-cell { width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0; transition: transform 0.12s, box-shadow 0.12s; cursor: pointer; position: relative; }
+.hm-cell:hover { transform: scale(1.2); z-index: 2; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+/* 等级颜色 — 绿色系（参考截图） */
+.hm-cell.l0 { background: #F0F4EF; }          /* 无记录 / 未打卡 */
+.hm-cell.l1 { background: #C8E0CF; }          /* 浅绿 */
+.hm-cell.l2 { background: #8FC1A0; }          /* 中绿 */
+.hm-cell.l3 { background: #52A76A; }          /* 深绿 */
+.hm-cell.l4 { background: #2D7D3F; }          /* 最深绿 */
+.hm-cell.today { box-shadow: inset 0 0 0 1.5px rgba(200,160,60,0.5); }
+.hm-cell.future { opacity: 0.25; }
+
+/* tooltip */
+.hm-cell[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: #fff; font-size: 10px; padding: 3px 7px;
+  border-radius: 4px; white-space: nowrap; z-index: 10; pointer-events: none;
+}
 
 /* 诗经卡片 */
 .poem-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; border-left: 3px solid var(--pink); }
@@ -265,21 +349,136 @@ canvas { width: 100% !important; height: 100% !important; }
 .quote-meta-row { font-size: 13px; color: var(--ink-soft); margin-bottom: 4px; }
 .quote-analysis { font-size: 13px; color: var(--ink-soft); line-height: 1.7; margin-top: 6px; }
 
-/* 新闻四板块 — 杂志式版面（头条+列表分栏） */
-.news-tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
-.news-tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid var(--line); background: #fff; border-radius: 999px; cursor: pointer; font-size: 13px; color: var(--ink-soft); transition: all 0.2s var(--ease-out); font-family: inherit; }
-.news-tab:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
-.news-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: var(--shadow-sm); }
-.news-tab svg { width: 14px; height: 14px; flex: 0 0 14px; stroke: currentColor; fill: none; stroke-width: 1.8; }
-.news-tab .tab-count { background: rgba(255,255,255,0.25); padding: 1px 7px; border-radius: 8px; font-size: 11px; font-weight: 500; }
-.news-tab:not(.active) .tab-count { background: var(--paper-3); color: var(--ink-faint); }
+/* ═══ 杂志式新闻阅读 — 左侧导航 + 右侧内容 ═══ */
+.news-mag {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.news-mag__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: sticky;
+  top: 20px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 8px;
+}
+.news-mag__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink-soft);
+  transition: all 0.2s var(--ease-out);
+  position: relative;
+}
+.news-mag__item:hover {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+.news-mag__item.active {
+  background: var(--section-color, var(--accent-soft));
+  color: #fff;
+  background-color: var(--sec-color);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.news-mag__item.active .news-mag__name { color: #fff; font-weight: 600; }
+.news-mag__item.active .news-mag__count {
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+}
+.news-mag__icon {
+  width: 22px; height: 22px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.news-mag__icon svg {
+  width: 16px; height: 16px;
+  stroke: currentColor; fill: none; stroke-width: 1.8;
+}
+.news-mag__name { flex: 1; font-weight: 500; font-size: 13px; color: var(--ink-soft); }
+.news-mag__count {
+  font-size: 11px;
+  background: var(--paper-3);
+  color: var(--ink-faint);
+  padding: 1px 7px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.news-mag__short { display: none; }
+.news-mag__content {
+  min-width: 0;
+  transition: opacity 0.15s ease;
+}
 
-.news-section { margin-bottom: 22px; }
+/* ═══ 新闻板块内容区（保留原样式） ═══ */
+.news-section { }
 .news-section-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--section-bg, var(--accent-soft)); border-radius: 10px; margin-bottom: 14px; }
 .news-section-icon { width: 26px; height: 26px; flex: 0 0 26px; display: flex; align-items: center; justify-content: center; border-radius: 7px; background: var(--section-color, var(--accent)); color: #fff; }
 .news-section-icon svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
 .news-section-name { font-size: 15px; font-weight: 600; color: var(--ink); }
 .news-section-count { font-size: 12px; color: var(--ink-faint); margin-left: auto; }
+
+/* 手机端：左侧垂直导航（贴左下角）+ 右侧内容区，与网页版一致 */
+@media (max-width: 600px) {
+  .news-mag {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 10px;
+  }
+  .news-mag__nav {
+    position: sticky;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 8px);
+    align-self: flex-end;
+    flex-direction: column;
+    gap: 2px;
+    width: 26px;
+    flex-shrink: 0;
+    padding: 5px 2px;
+    overflow: visible;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  }
+  .news-mag__item {
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    padding: 5px 1px;
+    min-width: 0;
+    max-width: none;
+    text-align: center;
+    flex-shrink: 0 !important;
+    justify-content: center;
+  }
+  .news-mag__icon { display: none !important; }
+  .news-mag__name { display: none !important; }
+  .news-mag__count { display: none !important; }
+  .news-mag__short {
+    display: inline-block !important;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    line-height: 1.08;
+    letter-spacing: 1px;
+  }
+  .news-mag__item.active .news-mag__short { color: #fff; }
+  .news-mag__content { flex: 1; min-width: 0; }
+}
 
 /* 头条大卡 — 标题区/内容区上下分栏 */
 .news-hero { display: block; padding: 20px 22px 16px; background: #fff; border: 1px solid var(--line); border-radius: 14px; text-decoration: none; color: inherit; transition: all 0.2s var(--ease-out); margin-bottom: 10px; position: relative; overflow: hidden; }
@@ -298,7 +497,7 @@ canvas { width: 100% !important; height: 100% !important; }
 .news-list-item:hover { border-color: var(--section-color, var(--accent)); transform: translateX(3px); box-shadow: var(--shadow-xs); }
 .news-list-num { font-size: 16px; font-weight: 700; color: var(--section-color, var(--accent)); min-width: 22px; opacity: 0.55; padding-top: 1px; }
 .news-list-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.news-list-title { font-size: 15px; font-weight: 600; color: var(--ink); line-height: 1.5; padding-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.news-list-title { font-size: 15px; font-weight: 600; color: var(--ink); line-height: 1.5; padding-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .news-list-meta { font-size: 11px; color: var(--ink-faint); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 7px; }
 
 /* 时间标签 */
@@ -310,7 +509,6 @@ canvas { width: 100% !important; height: 100% !important; }
   .news-hero-desc { -webkit-line-clamp: 2; font-size: 13px; }
   .news-list-num { font-size: 14px; min-width: 18px; }
   .news-section-header { padding: 8px 12px; }
-  .news-tab { padding: 6px 12px; font-size: 12px; }
 }
 
 /* 移动端底部导航 — ② 毛玻璃 */
@@ -640,8 +838,15 @@ canvas { width: 100% !important; height: 100% !important; }
             <div id="fn-month" style="height:200px;"></div>
           </div>
         </div>
-        <div class="chips" id="fn-chips"></div>
-        <div class="list" id="fn-list"></div>
+
+        <!-- ═══ 最近账目 — 标题行 + 分类下拉 ═══ -->
+        <div class="fn-list-header">
+          <h2 class="fn-list-title">最近账目</h2>
+          <select class="fn-cat-select" id="fn-cat-filter" onchange="filterFinance(this.value)">
+            <option value="全部">全部分类</option>
+          </select>
+        </div>
+        <div class="fn-list" id="fn-list"></div>
       </section>
 
       <!-- ========== 习惯健康 ========== -->
@@ -666,11 +871,17 @@ canvas { width: 100% !important; height: 100% !important; }
           <button class="btn btn-sm" id="habit-cancel" style="margin-left:8px;">取消</button>
         </div>
         <div id="habits-list"></div>
-        <div class="card" style="margin-top:16px;">
-          <div class="card-title">近30天热力图</div>
-          <div class="heatmap-months" id="heatmap-months"></div>
-          <div class="heatmap-wrap">
-            <div class="heatmap" id="habit-heatmap"></div>
+
+        <!-- ═══ 热力图区域 — 按习惯分行 ═══ -->
+        <div class="heatmap-section" id="heatmap-section">
+          <div class="heatmap-header">
+            <span class="heatmap-title"><span id="hm-day-count">30</span> 天 热力图</span>
+            <span class="heatmap-hint">手机可横向滑动↔</span>
+          </div>
+          <div class="heatmap-motto">坚持，是有形状的</div>
+          <div class="hm-grid-wrap">
+            <div class="hm-date-row" id="hm-dates"></div>
+            <div class="hm-body" id="hm-rows"></div>
           </div>
         </div>
       </section>
@@ -766,11 +977,10 @@ canvas { width: 100% !important; height: 100% !important; }
 <!-- 移动端底部导航 -->
 <nav class="tabbar">
   <button class="active" data-mod="overview"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>概览</button>
+  <button data-mod="read"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>一读</button>
   <button data-mod="finance"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="M8 16l3-4 3 2 4-6"/></svg>记账</button>
   <button data-mod="habits"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>习惯</button>
-  <button data-mod="fitness"><svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>健身</button>
-  <button data-mod="wishlist"><svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18"/></svg>待买</button>
-  <button data-mod="read"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>一读</button>
+  <button data-mod="other"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>其他</button>
 </nav>
 
 <div class="toast" id="toast"></div>
@@ -799,7 +1009,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-08-26c';
+const BUILD_VERSION = '2026-08-26q';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -888,6 +1098,8 @@ function esc(s) { return s == null ? '' : String(s).replace(/&/g,'&amp;').replac
 function today() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function fmtDate(s) { if (!s) return ''; const p = s.slice(0,10).split('-'); return `${p[1]}月${parseInt(p[2])}日`; }
 function fmtMoney(n) { if (!n) return '¥0.00'; return '¥' + Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function fmtMoneyNum(n) { if (!n) return '0.00'; return Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function fmtDateShort(s) { if (!s) return ''; const p = s.slice(0,10).split('-'); return `${parseInt(p[1])}月${parseInt(p[2])}日`; }
 function monthStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
 
 // ⑫ 空状态 SVG 插画生成器
@@ -971,31 +1183,46 @@ function switchModule(mod, source) {
     btn.classList.toggle('active', btn.dataset.mod === mod);
   });
   const target = document.getElementById(`mod-${mod}`);
-  if (!target) return;
-  
+  if (!target && mod !== 'other') return;
+
   // 移除所有模块的 active，加上转场类
   document.querySelectorAll('.module').forEach(m => {
     m.classList.remove('active', 'from-tabbar');
   });
-  
-  // 强制 reflow 让动画重新触发
-  void target.offsetWidth;
-  target.classList.add('active');
-  if (lastNavSource === 'tabbar') target.classList.add('from-tabbar');
-  
+
+  if (mod === 'other') {
+    // 其他：合并展示「健身」+「待买」
+    ['fitness', 'wishlist'].forEach(m => {
+      const t = document.getElementById(`mod-${m}`);
+      if (!t) return;
+      void t.offsetWidth;
+      t.classList.add('active');
+      if (lastNavSource === 'tabbar') t.classList.add('from-tabbar');
+    });
+  } else {
+    // 强制 reflow 让动画重新触发
+    void target.offsetWidth;
+    target.classList.add('active');
+    if (lastNavSource === 'tabbar') target.classList.add('from-tabbar');
+  }
+
   // ⑦ 平滑滚动回顶
   const main = document.querySelector('.main');
   if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  
-  if (!loaded[mod]) {
-    loaded[mod] = true;
-    loadModule(mod);
-  }
+
+  // 统一刷新逻辑：总是重新加载当前模块
+  loadModule(mod);
 }
 
 function loadModule(mod) {
   const loaders = { overview: loadOverview, finance: loadFinance, habits: loadHabits, fitness: loadFitness, wishlist: loadWishlist, read: loadDailyRead };
+  if (mod === 'other') {
+    // 其他页：同时加载健身与待买
+    loadFitness();
+    loadWishlist();
+    return;
+  }
   if (loaders[mod]) loaders[mod]();
 }
 
@@ -1109,29 +1336,68 @@ async function loadFinance() {
   }
 }
 
+// 模块级变量 — 当前选中的分类
+let _activeFinanceCat = '全部';
+
 function renderFinanceList(expenses) {
-  const cats = ['全部','餐饮','交通','购物','娱乐','医疗','教育','工资','其他'];
-  let activeCat = '全部';
+  // 固定分类列表
+  const fixedCats = ['餐饮','交通','购物','娱乐','医疗','教育','工资','其他'];
+  // 从数据中提取所有实际存在的分类（含用户新增的）
+  const dataCats = [...new Set(expenses.map(e => e.category).filter(Boolean))];
+  const allCats = [...new Set([...fixedCats, ...dataCats])];
 
-  $('fn-chips').innerHTML = cats.map(c => `<button class="chip ${c===activeCat?'active':''}" onclick="filterFinance('${c}')">${c}</button>`).join('');
+  // 填充下拉菜单
+  const sel = $('fn-cat-filter');
+  if (sel && sel.options.length <= 1) {
+    // 只在首次或分类变化时重建
+    allCats.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      if (c === _activeFinanceCat) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+  // 同步选中状态
+  if (sel) sel.value = _activeFinanceCat;
 
-  const filtered = activeCat === '全部' ? expenses : expenses.filter(e => e.category === activeCat);
+  // 筛选
+  const filtered = _activeFinanceCat === '全部' ? expenses : expenses.filter(e => e.category === _activeFinanceCat);
 
-  $('fn-list').innerHTML = filtered.slice(0, 50).map(e => `
-    <div class="item">
-      <div class="item-body">
-        <div class="item-title">${esc(e.note || e.category)}</div>
-        <div class="item-meta">
-          <span class="tag ${e.type==='支出'?'tag-pink':'tag-sage'}">${e.type}</span>
-          <span>${fmtDate(e.date)}</span>
+  // 分类图标映射
+  const catIconMap = {
+    '餐饮': '🍽️', '交通': '🚗', '购物': '🛒', '娱乐': '🎮',
+    '医疗': '💊', '教育': '📚', '工资': '💰', '其他': '📌',
+  };
+  const catIcon = (cat) => catIconMap[cat] || '📌';
+
+  // 渲染列表 — 参考图2风格
+  $('fn-list').innerHTML = filtered.slice(0, 80).map(e => {
+    const isExpense = e.type === '支出';
+    const amtClass = isExpense ? 'fn-amt--exp' : 'fn-amt--inc';
+    const amtPrefix = isExpense ? '-' : '+';
+    const iconBg = isExpense ? '#F5E6D8' : '#E2EFEC';
+    return `
+      <div class="fn-item">
+        <div class="fn-item__icon" style="background:${iconBg}">${catIcon(e.category || '其他')}</div>
+        <div class="fn-item__body">
+          <div class="fn-item__name">${esc(e.note || e.category || '未命名')}</div>
+          <div class="fn-item__meta">${fmtDateShort(e.date)} · ${esc(e.category||'其他')} · ${e.type||'支出'}</div>
+        </div>
+        <div class="fn-item__right">
+          <span class="fn-item__amt ${amtClass}">${amtPrefix}¥${fmtMoneyNum(e.amount)}</span>
+          <button class="fn-item__del" onclick="deleteExpense('${e.id}')" title="删除">🗑</button>
         </div>
       </div>
-      <div class="item-actions">
-        <span class="stat-value" style="font-size:16px;">${e.type==='支出'?'':'sage'}${e.type==='支出'?'-':'+'}${fmtMoney(e.amount).slice(1)}</span>
-        <button class="linkbtn" onclick="deleteExpense('${e.id}')">删除</button>
-      </div>
-    </div>
-  `).join('') || emptyState('wallet', '还没有记账记录', '点「记一笔」开始记录收支吧', '记一笔', "$('fn-panel').classList.add('open')");
+    `;
+  }).join('') || '<div class="fn-empty">还没有记账记录，点「记一笔」开始吧</div>';
+}
+
+function filterFinance(cat) {
+  _activeFinanceCat = cat;
+  // 不重新 loadFinance（避免闪烁），只重新渲染列表
+  sbQuery('expenses', { order: 'date desc', limit: 200 }).then(expenses => {
+    renderFinanceList(expenses);
+  });
 }
 
 // ⑥ 消费结构 — CSS 环形图 + 分类明细表格（可靠渲染，不依赖 SVG path）
@@ -1338,10 +1604,6 @@ function renderMonthChart(expenses) {
     + '<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#6B8E7B;"></span>\u6536\u5165</span>';
   container.appendChild(legend);
 }
-function filterFinance(cat) {
-  document.querySelectorAll('#fn-chips .chip').forEach(c => c.classList.toggle('active', c.textContent === cat));
-  loadFinance();
-}
 
 async function deleteExpense(id) {
   if (!await confirmDialog('删除这条记录？')) return;
@@ -1394,13 +1656,13 @@ async function loadHabits() {
               <button class="habit-count-btn" onclick="event.stopPropagation();incHabit('${h.id}','${todayStr}',1)">+</button>
             </div>
           ` : `
-            <input class="habit-val-input" id="val-${h.id}" value="${val}" onclick="event.stopPropagation()" />
+            <input class="habit-val-input" id="val-${h.id}" value="${val}" onclick="event.stopPropagation()" onblur="saveVal('${h.id}','${todayStr}')" />
           `}
         </div>
       `;
     }).join('') : emptyState('check', '还没有习惯', '点「新增习惯」添加你的第一个习惯吧', '新增习惯', "$('habit-panel').classList.add('open')");
     
-    renderHeatmap(records);
+    renderHeatmap(records, habits);
     
   } catch(e) {
     console.error('Habits error:', e);
@@ -1493,64 +1755,77 @@ async function deleteHabit(id) {
   catch(e) { toast('删除失败'); }
 }
 
-function renderHeatmap(records) {
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-  const days = 30;
-  const heatmap = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today); d.setDate(d.getDate() - i);
-    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const dayRecs = records.filter(r => r.date === ds);
-    const cnt = dayRecs.filter(r => r.checked).length;
-    heatmap.push({ date: ds, count: cnt, total: dayRecs.length, dow: d.getDay(), month: d.getMonth(), day: d.getDate(), isToday: ds === todayStr });
+function renderHeatmap(records, habits) {
+  const now = new Date();
+  const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const todayStr = ymd(now);
+
+  // 从当月1号开始，到今天为止
+  const dateArr = [];
+  for (let d = new Date(now.getFullYear(), now.getMonth(), 1); d <= now; d.setDate(d.getDate() + 1)) {
+    const ds = ymd(new Date(d)); // 快照，避免引用问题
+    dateArr.push({ ds, day: new Date(d).getDate(), isToday: ds === todayStr });
+  }
+  const days = dateArr.length;
+
+  // 渲染日期标题行 — 每天都显示数字
+  const datesEl = $('hm-dates');
+  if (datesEl) {
+    datesEl.innerHTML = dateArr.map(d =>
+      `<span class="hm-date-cell">${d.day}</span>`
+    ).join('');
   }
 
-  // 统计
-  const daysWithCheck = heatmap.filter(d => d.count > 0).length;
-  const totalChecks = heatmap.reduce((s, d) => s + d.count, 0);
-  // 计算连续打卡（从今天往前数）
-  let streak = 0;
-  for (let i = heatmap.length - 1; i >= 0; i--) {
-    if (heatmap[i].count > 0) streak++;
-    else break;
-  }
-  const maxCnt = Math.max(...heatmap.map(d => d.total), 1);
-
-  // 月份标签
-  const monthsEl = $('heatmap-months');
-  if (monthsEl) {
-    const firstMonth = heatmap[0].month + 1;
-    const lastMonthNum = heatmap[heatmap.length - 1].month + 1;
-    if (firstMonth === lastMonthNum) {
-      monthsEl.innerHTML = `<span></span><span style="color:var(--ink-soft);font-weight:600;">${firstMonth}月</span><span></span>`;
-    } else {
-      monthsEl.innerHTML = `<span>${firstMonth}月</span><span style="color:var(--ink-faint);">→</span><span style="font-weight:600;">${lastMonthNum}月</span>`;
-    }
+  // 如果没传 habits
+  if (!habits || !habits.length) {
+    const rowsEl = $('hm-rows');
+    if (rowsEl) rowsEl.innerHTML = '<div style="color:var(--ink-faint);font-size:13px;padding:20px 0;text-align:center;">暂无打卡数据</div>';
+    return;
   }
 
-  // 渲染日历格子
-  $('habit-heatmap').innerHTML = heatmap.map(d => {
-    const lvl = d.total === 0 ? '' : d.count / maxCnt > 0.7 ? 'l4' : d.count / maxCnt > 0.35 ? 'l3' : d.count > 0 ? 'l2' : 'l1';
-    const isToday = d.isToday ? 'today' : '';
-    const isEmpty = d.total === 0 ? 'empty' : '';
-    const tip = `${d.date}：打卡 ${d.count}/${d.total} 项`;
-    return `<div class="heat-cell ${lvl} ${isToday} ${isEmpty}" data-tip="${tip}" title="${tip}"><span class="hc-day">${d.day}</span><span class="hc-dot"></span></div>`;
+  // 按习惯分行渲染
+  const bodyEl = $('hm-rows');
+  if (!bodyEl) return;
+
+  bodyEl.innerHTML = habits.map(h => {
+    const icon = habitIcon(h.name, h.type);
+    let doneDays = 0;
+    const cells = dateArr.map(d => {
+      const rec = records.find(r => r.habit_id === h.id && r.date === d.ds);
+      const done = h.type === 'check' ? !!rec?.checked : h.type === 'count' ? (rec?.count > 0) : (rec?.value > 0);
+      if (done) doneDays++;
+      let lvl = done ? (d.isToday ? 'l4' : 'l3') : 'l0';
+      const tip = `${d.ds} ${esc(h.name)}${done ? ' ✓' : ''}`;
+      return `<span class="hm-cell ${lvl} ${d.isToday ? 'today' : ''}" data-tip="${tip}" title="${tip}"></span>`;
+    }).join('');
+
+    return `
+      <div class="hm-row">
+        <div class="hm-row-label"><span class="hm-icon">${icon}</span><span class="hm-name">${esc(h.name)}</span></div>
+        <div class="hm-cells">${cells}</div>
+        <div class="hm-row-count">${doneDays}天</div>
+      </div>
+    `;
   }).join('');
 
   // 底部统计
-  let statsEl = $('heatmap-stats');
+  let statsEl = $('hm-stats');
   if (!statsEl) {
     statsEl = document.createElement('div');
-    statsEl.id = 'heatmap-stats';
-    statsEl.className = 'heatmap-stats';
-    $('habit-heatmap').parentNode.appendChild(statsEl);
+    statsEl.id = 'hm-stats';
+    statsEl.className = 'hm-stats';
+    bodyEl.parentNode.appendChild(statsEl);
   }
-  statsEl.innerHTML =
-    `<div class="heatmap-stat"><div class="heatmap-stat-val" style="color:#C4704B">${streak}</div><div class="heatmap-stat-lbl">连续打卡</div></div>` +
-    `<div class="heatmap-stat"><div class="heatmap-stat-val" style="color:#6B8E7B">${daysWithCheck}</div><div class="heatmap-stat-lbl">活跃天数</div></div>` +
-    `<div class="heatmap-stat"><div class="heatmap-stat-val" style="color:#C9A84C">${totalChecks}</div><div class="heatmap-stat-lbl">总打卡次数</div></div>` +
-    `<div class="heatmap-stat"><div class="heatmap-stat-val">${days}</div><div class="heatmap-stat-lbl">统计周期</div></div>`;
+  const hasRecord = (ds) => records.some(r => habits.some(h => h.id === r.habit_id && r.date === ds && (h.type === 'check' ? !!r.checked : h.type === 'count' ? (r.count || 0) > 0 : (r.value || 0) > 0)));
+  const daysWithCheck = dateArr.filter(d => hasRecord(d.ds)).length;
+  const totalChecks = records.filter(r => dateArr.some(d => d.ds === r.date)).length;
+  let streak = 0;
+  for (let i = dateArr.length - 1; i >= 0; i--) { if (hasRecord(dateArr[i].ds)) streak++; else break; }
+  statsEl.innerHTML = `<div class="hm-stat"><div class="hm-stat-val">${streak}</div><div class="hm-stat-lbl">连续打卡</div></div><div class="hm-stat"><div class="hm-stat-val">${daysWithCheck}</div><div class="hm-stat-lbl">活跃天数</div></div><div class="hm-stat"><div class="hm-stat-val">${totalChecks}</div><div class="hm-stat-lbl">总打卡</div></div>`;
+
+  // 更新天数显示
+  const cntEl = $('hm-day-count');
+  if (cntEl) cntEl.textContent = days;
 }
 
 // ============================================================
@@ -1571,7 +1846,7 @@ async function loadFitness() {
       { label: '当前体重', value: latest.weight ? `${latest.weight}kg` : '--', cls: 'accent' },
       { label: '体脂率', value: latest.body_fat ? `${latest.body_fat}%` : '--', cls: 'sage' },
       { label: 'BMI', value: bmi, cls: 'gold' },
-      { label: '本周运动', value: `${plans.length}次`, cls: 'pink' }
+      { label: '计划总数', value: `${plans.length}项`, cls: 'pink' }
     ].map(s => `<div class="stat ${s.cls}"><div class="stat-label">${s.label}</div><div class="stat-value">${s.value}</div></div>`).join('');
     
     renderWeightChart(records.slice(0, 7).reverse());
@@ -1737,7 +2012,9 @@ async function loadWishlist() {
 }
 
 function filterWL(f) {
-  document.querySelectorAll('#wl-chips .chip').forEach(c => c.classList.toggle('active', c.textContent === f));
+  const btns = document.querySelectorAll('#wl-chips .chip');
+  btns.forEach(c => c.classList.remove('active'));
+  btns.forEach(c => { if (c.textContent.trim() === f) c.classList.add('active'); });
   loadWishlist();
 }
 
@@ -1906,22 +2183,42 @@ function renderReadContent(tab, data) {
     };
 
     c.innerHTML = `
-      <div class="news-tabs" id="news-tabs">
-        ${available.map((d,i) => `<button class="news-tab ${i===0?'active':''}" data-sec="${esc(d.name)}" style="--section-color:${d.color};">
-          <svg viewBox="0 0 24 24">${d.icon}</svg>
-          <span>${esc(d.name)}</span>
-          <span class="tab-count">${sections[d.name].length}</span>
-        </button>`).join('')}
+      <div class="news-mag">
+        <!-- 左侧板块导航 -->
+        <aside class="news-mag__nav">
+          ${available.map((d,i) => {
+            const short = {'今日热点':'热点','公司头条':'头条','财经速览':'财经','时事追踪':'时事'}[d.name]||d.name;
+            return `
+            <button class="news-mag__item ${i===0?'active':''}" data-sec="${esc(d.name)}" style="--sec-color:${d.color};">
+              <span class="news-mag__icon"><svg viewBox="0 0 24 24">${d.icon}</svg></span>
+              <span class="news-mag__name">${esc(d.name)}</span>
+              <span class="news-mag__short">${esc(short)}</span>
+              <span class="news-mag__count">${sections[d.name].length}</span>
+            </button>`;
+          }).join('')}
+        </aside>
+        <!-- 右侧内容区 -->
+        <main class="news-mag__content" id="news-section-body">
+          ${renderSection(activeSection)}
+        </main>
       </div>
-      <div id="news-section-body">${renderSection(activeSection)}</div>
     `;
 
-    // 板块 Tab 切换
-    c.querySelectorAll('.news-tab').forEach(btn => {
+    // 板块切换
+    c.querySelectorAll('.news-mag__item').forEach(btn => {
       btn.addEventListener('click', () => {
-        c.querySelectorAll('.news-tab').forEach(t => t.classList.remove('active'));
+        c.querySelectorAll('.news-mag__item').forEach(t => t.classList.remove('active'));
         btn.classList.add('active');
-        $('news-section-body').innerHTML = renderSection(btn.dataset.sec);
+        const body = $('news-section-body');
+        body.style.opacity = '0';
+        setTimeout(() => {
+          body.innerHTML = renderSection(btn.dataset.sec);
+          body.style.opacity = '1';
+          body.scrollTop = 0;
+          // 手机端：让整个新闻模块容器也滚回顶部
+          const mag = body.closest('.news-mag');
+          if (mag) { mag.scrollIntoView({ block: 'start' }); }
+        }, 120);
       });
     });
 
@@ -2173,7 +2470,7 @@ function bindEvents() {
     const day = parseInt($('plan-day').value);
     if (!exercise) { toast('请输入运动项目'); return; }
     try {
-      await sbInsert('workout_plans', { exercise, day, week: day, created_at: new Date().toISOString() });
+      await sbInsert('workout_plans', { exercise, day, created_at: new Date().toISOString() });
       $('plan-exercise').value = ''; toast('已添加'); await loadFitness();
     } catch(e) { toast('保存失败：' + (e.message||e)); }
   });
