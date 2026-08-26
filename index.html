@@ -789,7 +789,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-08-25c';
+const BUILD_VERSION = '2026-08-26a';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -1124,103 +1124,87 @@ function renderFinanceList(expenses) {
   `).join('') || emptyState('wallet', '还没有记账记录', '点「记一笔」开始记录收支吧', '记一笔', "$('fn-panel').classList.add('open')");
 }
 
-// ⑥ 甜甜圈图 — 交互式消费结构（SVG viewBox 重写，修复移动端不渲染弧形的问题）
+// ⑥ 消费结构 — CSS 环形图 + 分类明细表格（可靠渲染，不依赖 SVG path）
 function renderDonutChart(expenses) {
-  const canvas = $('fn-pie');
+  var canvas = $('fn-pie');
   if (!canvas) return;
-  const m = monthStr();
-  const expByCat = {};
-  expenses.filter(e => (e.date||'').startsWith(m) && e.type === '支出').forEach(e => {
-    const cat = e.category || '其他';
+  var m = monthStr();
+  var expByCat = {};
+  expenses.filter(function(e){ return (e.date||'').startsWith(m) && e.type === '\u652f\u51fa'; }).forEach(function(e) {
+    var cat = e.category || '\u5176\u4ed6';
     expByCat[cat] = (expByCat[cat] || 0) + Number(e.amount);
   });
-  const total = Object.values(expByCat).reduce((a,b) => a+b, 0);
-  const entries = Object.entries(expByCat).sort((a,b) => b[1]-a[1]);
-  const colors = ['#C4704B','#6B8E7B','#C9A84C','#D4A0A0','#7A9BB5','#B23A3A','#9A9085'];
+  var total = Object.values(expByCat).reduce(function(a,b){ return a+b; }, 0);
+  var entries = Object.entries(expByCat).sort(function(a,b){ return b[1]-a[1]; });
+  var colors = ['#C4704B','#6B8E7B','#C9A84C','#D4A0A0','#7A9BB5','#B23A3A','#9A9085','#5B8DBE','#8B7355'];
+
   canvas.innerHTML = '';
-  if (entries.length === 0) { canvas.innerHTML = '<span style="font-size:13px;color:var(--ink-faint);">暂无支出数据</span>'; return; }
+  if (entries.length === 0) { canvas.innerHTML = '<div style="text-align:center;padding:32px 0;color:var(--ink-faint);font-size:13px;">\u6682\u65e0\u652f\u51fa\u6570\u636e</div>'; return; }
 
-  const ns = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('viewBox', '0 0 200 200');
-  svg.setAttribute('width', '180');
-  svg.setAttribute('height', '180');
-  svg.style.display = 'block';
-  svg.style.margin = '0 auto';
+  // --- 构建 conic-gradient 色带 ---
+  var gradientParts = [];
+  var cumPct = 0;
+  entries.forEach(function(catAmt, i) {
+    var pct = total > 0 ? catAmt[1] / total : 0;
+    var start = cumPct * 100;
+    var end = (cumPct + pct) * 100;
+    gradientParts.push(colors[i % colors.length] + ' ' + start.toFixed(1) + '% ' + end.toFixed(1) + '%');
+    cumPct += pct;
+  });
 
-  const center = 100, outerR = 78, innerR = 50;
-  var cumulative = 0;
+  // --- 环形图容器 ---
+  var ringWrap = document.createElement('div');
+  ringWrap.style.cssText = 'position:relative;width:140px;height:140px;margin:0 auto 16px;flex-shrink:0;';
+
+  var ring = document.createElement('div');
+  ring.style.cssText = 'width:100%;height:100%;border-radius:50%;background:conic-gradient(' + gradientParts.join(',') + ');position:relative;';
+  // 中心镂空（用伪元素或内圈 div）
+  var inner = document.createElement('div');
+  inner.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:84px;height:84px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+  inner.innerHTML = '<span style="font-size:15px;font-weight:700;color:var(--ink);">' + fmtMoney(total).replace('\u00a5','') + '</span><span style="font-size:10px;color:var(--ink-faint);margin-top:1px;">\u672c\u6708\u652f\u51fa</span>';
+  ring.appendChild(inner);
+  ringWrap.appendChild(ring);
+  canvas.appendChild(ringWrap);
+
+  // --- 分类明细表格 ---
+  var table = document.createElement('div');
+  table.style.cssText = 'width:100%;display:flex;flex-direction:column;gap:0;';
+
+  // 表头
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:11px;color:var(--ink-faint);font-weight:500;';
+  hdr.innerHTML = '<span style="flex:1;">\u5206\u7c7b</span><span style="width:60px;text-align:right;">\u91d1\u989d</span><span style="width:42px;text-align:right;">\u5360\u6bd4</span>';
+  table.appendChild(hdr);
 
   entries.forEach(function(catAmt, i) {
     var cat = catAmt[0], amt = catAmt[1];
     var pct = total > 0 ? amt / total : 0;
-    var startAngle = cumulative * 2 * Math.PI;
-    var angle = pct * 2 * Math.PI;
-    cumulative += pct;
-
-    var x1 = center + outerR * Math.cos(startAngle - Math.PI/2);
-    var y1 = center + outerR * Math.sin(startAngle - Math.PI/2);
-    var x2 = center + innerR * Math.cos(startAngle - Math.PI/2);
-    var y2 = center + innerR * Math.sin(startAngle - Math.PI/2);
-    var x3 = center + innerR * Math.cos(startAngle + angle - Math.PI/2);
-    var y3 = center + innerR * Math.sin(startAngle + angle - Math.PI/2);
-    var x4 = center + outerR * Math.cos(startAngle + angle - Math.PI/2);
-    var y4 = center + outerR * Math.sin(startAngle + angle - Math.PI/2);
-    var largeArc = angle > Math.PI ? 1 : 0;
-
-    var d = ['M', x1.toFixed(2), y1.toFixed(2),
-      'A', outerR, outerR, 0, largeArc, 0, x4.toFixed(2), y4.toFixed(2),
-      'L', x3.toFixed(2), y3.toFixed(2),
-      'A', innerR, innerR, 0, largeArc, 1, x2.toFixed(2), y2.toFixed(2),
-      'Z'].join(' ');
-
-    var pathEl = document.createElementNS(ns, 'path');
-    pathEl.setAttribute('d', d);
-    pathEl.setAttribute('fill', colors[i % colors.length]);
-    pathEl.setAttribute('stroke', '#ffffff');
-    pathEl.setAttribute('stroke-width', '2');
-    pathEl.style.cursor = 'pointer';
-    pathEl.title = cat + '\uff1a' + fmtMoney(amt) + ' (' + Math.round(pct*100) + '%)';
-    svg.appendChild(pathEl);
-  });
-
-  // \u4e2d\u5fc3\u6587\u5b57
-  var text = document.createElementNS(ns, 'text');
-  text.setAttribute('x', '100'); text.setAttribute('y', '94');
-  text.setAttribute('text-anchor', 'middle');
-  text.setAttribute('fill', 'var(--ink)');
-  text.setAttribute('font-size', '14');
-  text.setAttribute('font-weight', '600');
-  text.textContent = fmtMoney(total).replace('\u00a5','');
-  svg.appendChild(text);
-
-  var sub = document.createElementNS(ns, 'text');
-  sub.setAttribute('x', '100'); sub.setAttribute('y', '112');
-  sub.setAttribute('text-anchor', 'middle');
-  sub.setAttribute('fill', 'var(--ink-faint)');
-  sub.setAttribute('font-size', '11');
-  sub.textContent = '\u672c\u6708\u652f\u51fa';
-  svg.appendChild(sub);
-
-  // \u6302\u8f7d
-  // 挂载（保留容器高度，用 flex 纵向排列 SVG + 图例）
-  canvas.style.cssText = 'min-height:200px;display:flex;flex-direction:column;align-items:center;padding:8px 0;';
-  canvas.appendChild(svg);
-
-  // \u56fe\u4f8b
-  var legend = document.createElement('div');
-  legend.style.cssText = 'display:flex;flex-direction:column;gap:4px;margin-top:8px;width:100%;';
-  entries.forEach(function(catAmt, i) {
-    var cat = catAmt[0], amt = catAmt[1];
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);';
-    row.innerHTML = '<span style="width:10px;height:10px;border-radius:3px;background:' + colors[i%colors.length] + ';flex-shrink:0;display:inline-block;"></span><span>' + esc(cat) + '</span><span style="margin-left:auto;color:var(--ink-faint);">' + fmtMoney(amt) + ' \u00b7 ' + Math.round(amt/total*100) + '%</span>';
-    legend.appendChild(row);
+    row.style.cssText = 'display:flex;align-items:center;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.04);';
+
+    var dot = '<span style="width:8px;height:8px;border-radius:50%;background:' + colors[i%colors.length] + ';flex-shrink:0;display:inline-block;margin-right:6px;"></span>';
+
+    // 进度条
+    var barW = Math.max(pct * 100, 3);
+    var barBg = '<span style="flex:1;height:4px;background:#f0ece8;border-radius:2px;margin:0 8px;overflow:hidden;display:block;"><span style="display:block;width:' + barW + '%;height:100%;background:' + colors[i%colors.length] + ';border-radius:2px;min-width:4px;"></span></span>';
+
+    row.innerHTML = '<span style="flex:1;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;">' + dot + esc(cat) + '</span>'
+      + '<span style="width:64px;text-align:right;font-size:13px;font-weight:600;color:var(--ink);">' + fmtMoney(amt) + '</span>'
+      + '<span style="width:44px;text-align:right;font-size:12px;color:var(--ink-faint);">' + Math.round(pct*100) + '%</span>';
+
+    table.appendChild(row);
   });
-  canvas.appendChild(legend);
+
+  // 合计行
+  var totalRow = document.createElement('div');
+  totalRow.style.cssText = 'display:flex;align-items:center;padding:10px 0 0;font-size:13px;font-weight:600;color:var(--ink);border-top:1px solid var(--line);margin-top:4px;';
+  totalRow.innerHTML = '<span style="flex:1;">\u5408\u8ba1</span><span style="width:64px;text-align:right;">' + fmtMoney(total) + '</span><span style="width:44px;"></span>';
+  table.appendChild(totalRow);
+
+  canvas.appendChild(table);
 }
 
-// \u2077 \u6708\u5ea6\u5bf9\u6bd4\u67f1\u72b6\u56fe \u2014 \u8fd16\u4e2a\u6708\u6536\u652f\u5bf9\u6bd4
+// ⑦ 月度对比 — 精致柱状图（近6个月收支对比）
 function renderMonthChart(expenses) {
   var container = $('fn-month');
   if (!container) return;
@@ -1241,12 +1225,14 @@ function renderMonthChart(expenses) {
     };
   });
 
-  var maxVal = Math.max(1, data.reduce(function(mx,d){ return Math.max(mx, d.expense, d.income); }, 1));
+  var maxVal = Math.max(100, data.reduce(function(mx,d){ return Math.max(mx, d.expense, d.income); }, 1));
+
   var ns = 'http://www.w3.org/2000/svg';
-  var W = 280, H = 160, padL = 30, padR = 10, padT = 10, padB = 24;
+  var W = 320, H = 180, padL = 32, padR = 12, padT = 16, padB = 28;
   var chartW = W - padL - padR, chartH = H - padT - padB;
-  var barW = chartW / months.length * 0.32;
-  var gap = chartW / months.length;
+  var groupW = chartW / months.length;
+  var barW = Math.max(10, Math.min(18, groupW * 0.3));
+  var gap = (groupW - barW * 2) / 3;
 
   var svg = document.createElementNS(ns, 'svg');
   svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
@@ -1254,62 +1240,94 @@ function renderMonthChart(expenses) {
   svg.style.height = H + 'px';
   svg.style.display = 'block';
 
+  // 背景网格线
   for (var li = 0; li <= 4; li++) {
     var ly = padT + chartH - (li/4)*chartH;
     var line = document.createElementNS(ns, 'line');
     line.setAttribute('x1', padL); line.setAttribute('y1', ly);
     line.setAttribute('x2', W-padR); line.setAttribute('y2', ly);
-    line.setAttribute('stroke', '#eee');
+    line.setAttribute('stroke', '#f0ece8'); line.setAttribute('stroke-width', '1');
     svg.appendChild(line);
+    // Y轴标签
+    var yLbl = document.createElementNS(ns, 'text');
+    yLbl.setAttribute('x', padL - 6); yLbl.setAttribute('y', ly + 3);
+    yLbl.setAttribute('text-anchor', 'end'); yLbl.setAttribute('fill', '#bbb');
+    yLbl.setAttribute('font-size', '9');
+    yLbl.textContent = fmtMoney(Math.round(maxVal * li / 4));
+    svg.appendChild(yLbl);
   }
 
-  data.forEach(function(d, i) {
-    var cx = padL + gap*i + gap/2;
-    var eh = (d.expense/maxVal)*chartH;
-    var ih = (d.income/maxVal)*chartH;
+  // 基线
+  var baseLine = document.createElementNS(ns, 'line');
+  baseLine.setAttribute('x1', padL); baseLine.setAttribute('y1', padT + chartH);
+  baseLine.setAttribute('x2', W-padR); baseLine.setAttribute('y2', padT + chartH);
+  baseLine.setAttribute('stroke', '#ddd'); baseLine.setAttribute('stroke-width', '1');
+  svg.appendChild(baseLine);
 
+  data.forEach(function(d, i) {
+    var cx = padL + groupW * i + groupW / 2;
+    var eh = Math.max(2, (d.expense/maxVal)*chartH);
+    var ih = Math.max(2, (d.income/maxVal)*chartH);
+
+    // 支出柱
+    var er = document.createElementNS(ns, 'rect');
+    er.setAttribute('x', cx - barW - gap/2);
+    er.setAttribute('y', padT + chartH - eh);
+    er.setAttribute('width', barW); er.setAttribute('height', eh);
+    er.setAttribute('rx', '3'); er.setAttribute('ry', '3');
+    er.setAttribute('fill', '#C4704B');
+    er.setAttribute('opacity', d.expense > 0 ? '1' : '0.12');
+    er.title = d.label + ' \u652f\u51fa: ' + fmtMoney(d.expense);
+    svg.appendChild(er);
     if (d.expense > 0) {
-      var er = document.createElementNS(ns, 'rect');
-      er.setAttribute('x', cx - barW - 1.5);
-      er.setAttribute('y', padT + chartH - eh);
-      er.setAttribute('width', barW);
-      er.setAttribute('height', eh);
-      er.setAttribute('rx', '2');
-      er.setAttribute('fill', '#C4704B');
-      er.title = '\u652f\u51fa ' + fmtMoney(d.expense);
-      svg.appendChild(er);
+      var eVal = document.createElementNS(ns, 'text');
+      eVal.setAttribute('x', cx - barW/2 - gap/2);
+      eVal.setAttribute('y', padT + chartH - eh - 4);
+      eVal.setAttribute('text-anchor', 'middle');
+      eVal.setAttribute('fill', '#C4704B'); eVal.setAttribute('font-size', '9');
+      eVal.setAttribute('font-weight', '600');
+      eVal.textContent = d.expense >= 1000 ? (d.expense/1000).toFixed(1)+'k' : String(d.expense);
+      svg.appendChild(eVal);
     }
+
+    // 收入柱
+    var ir = document.createElementNS(ns, 'rect');
+    ir.setAttribute('x', cx + gap/2);
+    ir.setAttribute('y', padT + chartH - ih);
+    ir.setAttribute('width', barW); ir.setAttribute('height', ih);
+    ir.setAttribute('rx', '3'); ir.setAttribute('ry', '3');
+    ir.setAttribute('fill', '#6B8E7B');
+    ir.setAttribute('opacity', d.income > 0 ? '1' : '0.12');
+    ir.title = d.label + ' \u6536\u5165: ' + fmtMoney(d.income);
+    svg.appendChild(ir);
     if (d.income > 0) {
-      var ir = document.createElementNS(ns, 'rect');
-      ir.setAttribute('x', cx + 1.5);
-      ir.setAttribute('y', padT + chartH - ih);
-      ir.setAttribute('width', barW);
-      ir.setAttribute('height', ih);
-      ir.setAttribute('rx', '2');
-      ir.setAttribute('fill', '#6B8E7B');
-      ir.title = '\u6536\u5165 ' + fmtMoney(d.income);
-      svg.appendChild(ir);
+      var iVal = document.createElementNS(ns, 'text');
+      iVal.setAttribute('x', cx + barW/2 + gap/2);
+      iVal.setAttribute('y', padT + chartH - ih - 4);
+      iVal.setAttribute('text-anchor', 'middle');
+      iVal.setAttribute('fill', '#6B8E7B'); iVal.setAttribute('font-size', '9');
+      iVal.setAttribute('font-weight', '600');
+      iVal.textContent = d.income >= 1000 ? (d.income/1000).toFixed(1)+'k' : String(d.income);
+      svg.appendChild(iVal);
     }
+
+    // X轴月份标签
     var lbl = document.createElementNS(ns, 'text');
-    lbl.setAttribute('x', cx);
-    lbl.setAttribute('y', H - 5);
-    lbl.setAttribute('text-anchor', 'middle');
-    lbl.setAttribute('fill', '#999');
+    lbl.setAttribute('x', cx); lbl.setAttribute('y', H - 7);
+    lbl.setAttribute('text-anchor', 'middle'); lbl.setAttribute('fill', '#999');
     lbl.setAttribute('font-size', '11');
     lbl.textContent = d.label;
     svg.appendChild(lbl);
   });
 
-  var legend = document.createElement('div');
-  legend.style.cssText = 'display:flex;justify-content:center;gap:16px;margin-top:8px;font-size:11px;color:var(--ink-soft);';
-  legend.innerHTML = '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#C4704B;"></span>\u652f\u51fa</span>'
-    + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#6B8E7B;"></span>\u6536\u5165</span>';
-
   container.appendChild(svg);
+
+  var legend = document.createElement('div');
+  legend.style.cssText = 'display:flex;justify-content:center;gap:18px;margin-top:10px;font-size:11px;color:var(--ink-soft);';
+  legend.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#C4704B;"></span>\u652f\u51fa</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#6B8E7B;"></span>\u6536\u5165</span>';
   container.appendChild(legend);
 }
-
-
 function filterFinance(cat) {
   document.querySelectorAll('#fn-chips .chip').forEach(c => c.classList.toggle('active', c.textContent === cat));
   loadFinance();
