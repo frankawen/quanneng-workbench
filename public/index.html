@@ -497,7 +497,7 @@ canvas { width: 100% !important; height: 100% !important; }
 .news-list-item:hover { border-color: var(--section-color, var(--accent)); transform: translateX(3px); box-shadow: var(--shadow-xs); }
 .news-list-num { font-size: 16px; font-weight: 700; color: var(--section-color, var(--accent)); min-width: 22px; opacity: 0.55; padding-top: 1px; }
 .news-list-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.news-list-title { font-size: 15px; font-weight: 600; color: var(--ink); line-height: 1.5; padding-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.news-list-title { font-size: 15px; font-weight: 600; color: var(--ink); line-height: 1.5; padding-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .news-list-meta { font-size: 11px; color: var(--ink-faint); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 7px; }
 
 /* 时间标签 */
@@ -1009,7 +1009,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-08-26o';
+const BUILD_VERSION = '2026-08-26p';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -2214,6 +2214,10 @@ function renderReadContent(tab, data) {
         setTimeout(() => {
           body.innerHTML = renderSection(btn.dataset.sec);
           body.style.opacity = '1';
+          body.scrollTop = 0;
+          // 手机端：让整个新闻模块容器也滚回顶部
+          const mag = body.closest('.news-mag');
+          if (mag) { mag.scrollIntoView({ block: 'start' }); }
         }, 120);
       });
     });
