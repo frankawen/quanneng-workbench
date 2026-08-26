@@ -441,7 +441,7 @@ canvas { width: 100% !important; height: 100% !important; }
   }
   .news-mag__nav {
     position: sticky;
-    bottom: 14px;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 8px);
     align-self: flex-end;
     flex-direction: column;
     gap: 2px;
@@ -1009,7 +1009,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-08-26p';
+const BUILD_VERSION = '2026-08-26q';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
