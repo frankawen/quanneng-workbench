@@ -1,12 +1,9 @@
 name: 全能工作台爬虫
 on:
-  schedule:
-    # 新闻：北京时间 6:00/6:10/6:20/6:30, 12:00/12:10/12:20/12:30, 17:00/17:10/17:20/17:30
-    # （GitHub cron 是 UTC 需 -8h → 22,4,9；每档隔 10 分钟连补 4 枪，防 schedule 偶发丢触发）
-    - cron: '0,10,20,30 22,4,9 * * *'
-    # 诗经/名句/评论：北京时间 5:00/5:10/5:20/5:30（UTC 21:00/21:10/21:20/21:30，连补 4 枪）
-    - cron: '0,10,20,30 21 * * *'
-  workflow_dispatch:  # 允许手动触发
+  # 定时调度已迁移到 Supabase pg_cron（supabase/sql/setup_crawl_cron.sql），
+  # 由 Edge Function crawl-scheduler 发 workflow_dispatch 触发本流程。
+  # GitHub 自带 schedule 已关闭，避免与 Supabase 双倍触发。
+  workflow_dispatch:  # 仅保留手动触发（供 Supabase pg_cron 调用）
 
 jobs:
   crawl:
