@@ -346,9 +346,21 @@ def fetch_comments():
 
 
 if __name__ == '__main__':
-    print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M")}] 开始爬取...')
-    fetch_news()
-    fetch_shijing()
-    fetch_quotes()
-    fetch_comments()
+    now = datetime.now(BEIJING)
+    h = now.hour
+    print(f'[{now.strftime("%Y-%m-%d %H:%M")}] 开始爬取... 北京时间 {h}:00 档')
+    # 诗经 + 名句：5 点为主，6/12/17 点档顺带补抓（防止 5 点整窗失败留空）
+    if h in (5, 6, 12, 17):
+        fetch_shijing()
+        fetch_quotes()
+    # 新闻 + 评论：6/12/17 点（评论已从 5 点挪到 6 点，避开人民日报版面凌晨未出导致 404）
+    if h in (6, 12, 17):
+        fetch_news()
+        fetch_comments()
+    # 其它时刻（手动触发 / 延迟补跑）：全量补抓
+    if h not in (5, 6, 12, 17):
+        fetch_news()
+        fetch_shijing()
+        fetch_quotes()
+        fetch_comments()
     print('爬取完成!')
