@@ -2104,7 +2104,8 @@ async function loadDailyRead(tab = 'news') {
       sbQuery('shijing', { order: 'title asc', limit: 100 }),
       sbQuery('quotes', { order: 'crawled_at desc', limit: 100 }),
       sbQuery('comments', { order: 'crawled_at desc', limit: 20 }),
-      sbQuery('daily_read', { order: 'date desc', limit: 7 })
+      // daily_read 表可能未建，失败不影响其余模块
+      sbQuery('daily_read', { order: 'date desc', limit: 7 }).catch(() => [])
     ]);
 
     renderReadContent(tab, { news, shijing, quotes, comments, dailyRead });
