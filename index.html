@@ -1045,7 +1045,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-08-26w';
+const BUILD_VERSION = '2026-08-31a';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -1130,7 +1130,9 @@ async function sbDelete(table, id) {
 // 通用工具
 // ============================================================
 function $(id) { return document.getElementById(id); }
-function esc(s) { return s == null ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s) { return s == null ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+// 专用于 HTML 属性值：比 esc() 多转义反引号，防止内容里的引号提前闭合属性导致取值被截断
+function escAttr(s) { return esc(s).replace(/`/g,'&#96;').replace(/=/g,'&#61;'); }
 function today() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function fmtDate(s) { if (!s) return ''; const p = s.slice(0,10).split('-'); return `${p[1]}月${parseInt(p[2])}日`; }
 function fmtMoney(n) { if (!n) return '¥0.00'; return '¥' + Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
@@ -2105,7 +2107,9 @@ async function loadWordbank() {
     const items = await sbQuery('wordbank', { order: 'created_at desc', limit: 200 });
     const cats = ['全部', ...Array.from(new Set((items || []).map(i => i.category || '未分类')))];
     const active = wbActiveCat || '全部';
-    $('wb-chips').innerHTML = cats.map(c => `<button class="chip ${c === active ? 'active' : ''}" onclick="filterWB('${esc(c)}')">${esc(c)}</button>`).join('');
+    // 顺带刷新去重缓存，保证与库内数据一致
+    _wbCache = new Set((items || []).map(i => String(i.word || '').trim()).filter(Boolean));
+    $('wb-chips').innerHTML = cats.map(c => `<button class="chip ${c === active ? 'active' : ''}" onclick="filterWB('${escAttr(c)}')">${esc(c)}</button>`).join('');
     // 统计卡片
     $('wb-stats').innerHTML = [
       { label: '收藏总数', value: (items || []).length, cls: 'stat-blue' },
@@ -2174,10 +2178,28 @@ async function recognizeWord(dataUrl) {
 }
 
 // 每日一读名句卡片「＋ 收藏」：一键写入词语积累（分类默认「名句」，来源=作者）
+// 已收藏词语的本地缓存（避免连点重复写入；页面切换时由 loadWordbank 刷新）
+let _wbCache = new Set();
+
 async function addToWordbank(word, author) {
   if (!word) return;
+  const w = String(word).trim();
+  if (!w) return;
   try {
-    await sbInsert('wordbank', { word, meaning: '', category: '名句', source: author || '', created_at: new Date().toISOString() });
+    // 去重：先查本地缓存，未命中再查库（连点/重复名句只会存一份）
+    if (!_wbCache.has(w)) {
+      const exist = await sbQuery('wordbank', { filter: { property: 'word', operator: 'eq', value: w }, limit: 1 });
+      if (Array.isArray(exist) && exist.length > 0) {
+        _wbCache.add(w);
+        toast('这个词已经在词语积累里了 ✓');
+        return;
+      }
+    } else {
+      toast('这个词已经在词语积累里了 ✓');
+      return;
+    }
+    await sbInsert('wordbank', { word: w, meaning: '', category: '名句', source: author || '', created_at: new Date().toISOString() });
+    _wbCache.add(w);
     toast('已收藏到词语积累 ✓');
     if (currentModule === 'wordbank') await loadWordbank();
   } catch(e) { toast('收藏失败：' + (e.message || e)); }
@@ -2316,7 +2338,7 @@ function renderReadContent(tab, data) {
           ${available.map((d,i) => {
             const short = {'今日热点':'热点','公司头条':'头条','财经速览':'财经','时事追踪':'时事'}[d.name]||d.name;
             return `
-            <button class="news-mag__item ${i===0?'active':''}" data-sec="${esc(d.name)}" style="--sec-color:${d.color};">
+            <button class="news-mag__item ${i===0?'active':''}" data-sec="${escAttr(d.name)}" style="--sec-color:${d.color};">
               <span class="news-mag__icon"><svg viewBox="0 0 24 24">${d.icon}</svg></span>
               <span class="news-mag__name">${esc(d.name)}</span>
               <span class="news-mag__short">${esc(short)}</span>
@@ -2402,7 +2424,7 @@ function renderReadContent(tab, data) {
         <div class="daily-footer">
           ${quote.source ? `来源：${esc(quote.source)}` : ''}
           ${quote.url ? `<br><a href="${esc(quote.url)}" target="_blank">前往古诗文网查看原篇及完整释义 ↗</a>` : ''}
-          <button class="linkbtn wb-add-quote" data-w="${esc(quote.quote)}" data-a="${esc(quote.author || '')}" style="margin-left:8px;">＋ 收藏到词语积累</button>
+          <button class="linkbtn wb-add-quote" data-w="${escAttr(quote.quote)}" data-a="${escAttr(quote.author || '')}" style="margin-left:8px;">＋ 收藏到词语积累</button>
         </div>
       </div>` : ''}
 
