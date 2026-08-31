@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 全能工作台爬虫脚本 v3（2026-08-21 重构版）
+
+【重要】本文件自 2026-08-31 起已不再是主调度路径，仅作离线补抓 / 回滚备份保留。
+主路径已迁移为 Supabase Edge Function：supabase/functions/crawler/index.ts
+  pg_cron → Edge Function crawler → 抓取 + 直接写库（不再经过 GitHub Actions / PAT）
+改逻辑时请同步修改 index.ts，否则线上不会生效。
+如需手动补数据：本机 pip install httpx parsel 后直接 python crawlers/crawler.py（走全量分支）。
+
 数据源（均已实测可达）：
   新闻   -> 界面新闻快报四板块    lists/1324kb(热点) / 1325kb(公司) / 主页混合(财经/时事)
   诗经   -> 古文岛诗经            guwendao.net
@@ -345,10 +352,114 @@ def fetch_comments():
         print(f'  ✗ 评论抓取失败: {e}')
 
 
+# ============================================================
+# 每日一读 — 学习强国公众号（微信文章）
+# 只存标题 + 简介 + 链接，不存全文（符合"不爬全部内容"诉求）。
+# 链路：wxpub 列表接口拿文章 URL → 直连微信原文页取 og:title + 正文首段。
+# 不依赖 anything-md.doocs.org 等 html2md 服务，更轻量、更稳。
+# ============================================================
+WXPUB_APP_ID = os.environ.get('WXPUB_APP_ID', 'ak_5b77378a1d0b425a')
+WXPUB_SECURE_KEY = os.environ.get('WXPUB_SECURE_KEY', '768135762d9dd1f1b125b5429cac2405')
+WXPUB_LIST_URL = 'https://wxpub.aibana.art/fetch'
+
+
+def _wxpub_list(name, start, end):
+    """查公众号文章列表，返回 (urls, dates) 两个等长的列表。"""
+    try:
+        r = httpx.post(WXPUB_LIST_URL, json={
+            'app_id': WXPUB_APP_ID, 'secure_key': WXPUB_SECURE_KEY,
+            'name': name, 'startDate': start, 'endDate': end
+        }, timeout=40)
+        if r.status_code == 200:
+            d = r.json()
+            return d.get('urls', []), d.get('date', [])
+        print(f'  ! wxpub 列表 {r.status_code}: {r.text[:120]}')
+    except Exception as e:
+        print(f'  ! wxpub 列表异常: {e}')
+    return [], []
+
+
+def _wx_meta(url):
+    """直连微信原文页，取 og:title + 正文首段（作简介）。失败返回 (None, '')。"""
+    try:
+        r = httpx.get(url, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+            'Referer': 'https://mp.weixin.qq.com/'
+        }, timeout=30, follow_redirects=True)
+        if r.status_code != 200:
+            return None, ''
+        html = r.text
+
+        def meta(prop):
+            m = re.search(r'<meta[^>]+property=["\']' + re.escape(prop) + r'["\'][^>]+content=["\']([^"\']*)["\']', html)
+            if not m:
+                m = re.search(r'<meta[^>]+content=["\']([^"\']*)["\'][^>]+property=["\']' + re.escape(prop) + r'["\']', html)
+            return m.group(1) if m else ''
+
+        title = meta('og:title')
+        desc = meta('og:description')
+        if desc:
+            summary = desc
+        else:
+            # 回退：取正文 js_content 首段
+            mc = re.search(r'id=["\']js_content["\'][^>]*>(.*?)</div>\s*</div>', html, re.S)
+            summary = re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', '', mc.group(1))).strip() if mc else ''
+        return title, (summary or '')[:90]
+    except Exception as e:
+        return None, ''
+
+
+def fetch_daily_read():
+    print('[每日一读] 抓取学习强国公众号...')
+    today = datetime.now(BEIJING).strftime('%Y-%m-%d')
+    # 当天已抓过则跳过（防止 5/6/12/17 四档重复写入）
+    if existing_keys('daily_read', 'date', [today]):
+        print('  · 今日已抓取，跳过')
+        return
+    # 查最近 3 天，覆盖当日尚未发布或延迟的情况
+    end = datetime.now(BEIJING)
+    start = end - timedelta(days=2)
+    urls, dates = _wxpub_list('学习强国', start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'))
+    if not urls:
+        print('  ! 未获取到文章列表')
+        return
+    # 按发布日期倒序，最新优先
+    paired = sorted(zip(urls, dates), key=lambda x: x[1], reverse=True)
+    for url, _pub in paired:
+        title, summary = _wx_meta(url)
+        if title and '每日一读' in title:
+            if existing_keys('daily_read', 'url', [url]):
+                print('  · 该文章已存在，跳过')
+                return
+            api_post('daily_read', [{
+                'date': today,
+                'title': title[:120],
+                'summary': summary,
+                'url': url,
+                'source': '学习强国'
+            }])
+            return
+    print('  ! 近 3 天未找到「每日一读」文章（可能尚未发布，下个整点再试）')
+
+
 if __name__ == '__main__':
-    print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M")}] 开始爬取...')
-    fetch_news()
-    fetch_shijing()
-    fetch_quotes()
-    fetch_comments()
+    now = datetime.now(BEIJING)
+    h = now.hour
+    print(f'[{now.strftime("%Y-%m-%d %H:%M")}] 开始爬取... 北京时间 {h}:00 档')
+    # 诗经 + 名句 + 每日一读：5 点为主，6/12/17 点档顺带补抓（防止 5 点整窗失败留空）
+    if h in (5, 6, 12, 17):
+        fetch_shijing()
+        fetch_quotes()
+        fetch_daily_read()
+    # 新闻 + 评论：6/12/17 点（评论已从 5 点挪到 6 点，避开人民日报版面凌晨未出导致 404）
+    if h in (6, 12, 17):
+        fetch_news()
+        fetch_comments()
+    # 其它时刻（手动触发 / 延迟补跑）：全量补抓
+    if h not in (5, 6, 12, 17):
+        fetch_news()
+        fetch_shijing()
+        fetch_quotes()
+        fetch_comments()
+        fetch_daily_read()
     print('爬取完成!')
