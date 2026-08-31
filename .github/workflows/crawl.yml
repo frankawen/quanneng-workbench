@@ -1,9 +1,10 @@
 name: 全能工作台爬虫
 on:
-  # 定时调度已迁移到 Supabase pg_cron（supabase/sql/setup_crawl_cron.sql），
-  # 由 Edge Function crawl-scheduler 发 workflow_dispatch 触发本流程。
-  # GitHub 自带 schedule 已关闭，避免与 Supabase 双倍触发。
-  workflow_dispatch:  # 仅保留手动触发（供 Supabase pg_cron 调用）
+  # 正式调度已完全迁移到 Supabase pg_cron，直接调用 Edge Function crawler
+  # （见 supabase/sql/setup_crawler_cron.sql），本机/本仓库无需参与，也不依赖 PAT。
+  # 本 workflow 仅作应急补数据的手动入口：GitHub → Actions → 本流程 → Run workflow。
+  # 注意：手动运行请在「北京时间」5/6/12/17 点触发，其它时刻会自动走全量补抓分支。
+  workflow_dispatch:
 
 jobs:
   crawl:

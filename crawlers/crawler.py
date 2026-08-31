@@ -358,8 +358,14 @@ def fetch_comments():
 # 链路：wxpub 列表接口拿文章 URL → 直连微信原文页取 og:title + 正文首段。
 # 不依赖 anything-md.doocs.org 等 html2md 服务，更轻量、更稳。
 # ============================================================
-WXPUB_APP_ID = os.environ.get('WXPUB_APP_ID', 'ak_5b77378a1d0b425a')
-WXPUB_SECURE_KEY = os.environ.get('WXPUB_SECURE_KEY', '768135762d9dd1f1b125b5429cac2405')
+# 凭据只允许从环境变量读取，禁止硬编码（本仓库公开）。
+# 本地应急补数据时先 export：
+#   export WXPUB_APP_ID=...
+#   export WXPUB_SECURE_KEY=...
+# 未配置时「每日一读」自动跳过，其余抓取不受影响。
+WXPUB_APP_ID = os.environ.get('WXPUB_APP_ID', '')
+WXPUB_SECURE_KEY = os.environ.get('WXPUB_SECURE_KEY', '')
+WXPUB_READY = bool(WXPUB_APP_ID and WXPUB_SECURE_KEY)
 WXPUB_LIST_URL = 'https://wxpub.aibana.art/fetch'
 
 
@@ -411,6 +417,9 @@ def _wx_meta(url):
 
 def fetch_daily_read():
     print('[每日一读] 抓取学习强国公众号...')
+    if not WXPUB_READY:
+        print('  ! 未配置 WXPUB_APP_ID / WXPUB_SECURE_KEY，跳过（不影响其它数据源）')
+        return
     today = datetime.now(BEIJING).strftime('%Y-%m-%d')
     # 当天已抓过则跳过（防止 5/6/12/17 四档重复写入）
     if existing_keys('daily_read', 'date', [today]):

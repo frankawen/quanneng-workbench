@@ -30,8 +30,14 @@ const SERVICE_KEY =
   Deno.env.get("SUPABASE_ANON_KEY") ||
   "";
 const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
-const WXPUB_APP_ID = Deno.env.get("WXPUB_APP_ID") || "ak_5b77378a1d0b425a";
-const WXPUB_SECURE_KEY = Deno.env.get("WXPUB_SECURE_KEY") || "768135762d9dd1f1b125b5429cac2405";
+// 第三方公众号接口凭据：只允许从 Supabase Secrets 读取，禁止硬编码（仓库公开）。
+// 在 Supabase 控制台 → Edge Functions → Secrets 添加：
+//   WXPUB_APP_ID      = <公众号接口 app_id>
+//   WXPUB_SECURE_KEY  = <公众号接口 secure_key>
+// 未配置时「每日一读」自动跳过，其余数据源（新闻/诗经/名句/评论）不受影响。
+const WXPUB_APP_ID = Deno.env.get("WXPUB_APP_ID") || "";
+const WXPUB_SECURE_KEY = Deno.env.get("WXPUB_SECURE_KEY") || "";
+const WXPUB_READY = Boolean(WXPUB_APP_ID && WXPUB_SECURE_KEY);
 
 const REST = `${SUPABASE_URL}/rest/v1`;
 const UA =
@@ -542,6 +548,7 @@ async function fetchComments(bj: { ym: string; day: string; date: string }) {
 // 每日一读 — 学习强国公众号
 // ============================================================
 async function wxpubList(name: string, start: string, end: string) {
+  if (!WXPUB_READY) return { urls: [] as string[], dates: [] as string[] };
   try {
     const r = await http("https://wxpub.aibana.art/fetch", {
       method: "POST",
@@ -590,6 +597,10 @@ async function wxMeta(url: string): Promise<{ title: string; summary: string }> 
 
 async function fetchDailyRead(dateStr: string) {
   say("[每日一读] 抓取学习强国公众号...");
+  if (!WXPUB_READY) {
+    say("  ! 未配置 WXPUB_APP_ID / WXPUB_SECURE_KEY，跳过（不影响其它数据源）");
+    return 0;
+  }
   const todayHave = await existingSet("daily_read", "date", "", 200);
   if (todayHave.has(dateStr)) {
     say("  · 今日已抓取，跳过");
