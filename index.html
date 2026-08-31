@@ -2101,6 +2101,8 @@ async function saveWL(data) {
 // 词语积累
 // ============================================================
 let wbActiveCat = '全部'; // 当前分类筛选
+// 已收藏词语的本地缓存（供 addToWordbank 去重；由 loadWordbank 刷新）
+let _wbCache = new Set();
 
 async function loadWordbank() {
   try {
@@ -2178,9 +2180,6 @@ async function recognizeWord(dataUrl) {
 }
 
 // 每日一读名句卡片「＋ 收藏」：一键写入词语积累（分类默认「名句」，来源=作者）
-// 已收藏词语的本地缓存（避免连点重复写入；页面切换时由 loadWordbank 刷新）
-let _wbCache = new Set();
-
 async function addToWordbank(word, author) {
   if (!word) return;
   const w = String(word).trim();
