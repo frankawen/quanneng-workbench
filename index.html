@@ -734,6 +734,10 @@ canvas { width: 100% !important; height: 100% !important; }
         <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
         待买清单
       </button>
+      <button class="nav-btn" data-mod="wordbank">
+        <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M9 7h7M9 11h7M9 15h4"/></svg>
+        词语积累
+      </button>
     </nav>
     <div class="side-foot">数据存于云端 · 多端同步<br>新增/修改/删除即时写回<br><span id="build-stamp"></span></div>
   </aside>
@@ -970,6 +974,38 @@ canvas { width: 100% !important; height: 100% !important; }
         <div class="list" id="wl-list"></div>
       </section>
 
+      <!-- ========== 词语积累 ========== -->
+      <section class="module" id="mod-wordbank">
+        <div class="mhead">
+          <h1>词语积累</h1>
+          <p>收藏想记的词语，支持手动添加、拍照识别、按分类查看</p>
+        </div>
+        <div class="stats" id="wb-stats"></div>
+        <div class="addrow">
+          <button class="btn btn-sm" id="wb-camera-btn">📷 拍照识词</button>
+          <button class="btn btn-sm" id="wb-upload-btn">🖼️ 上传图片</button>
+          <button class="btn btn-primary btn-sm" id="wb-add-btn">＋ 手动添加</button>
+          <input type="file" id="wb-camera-input" accept="image/*" style="display:none">
+          <input type="file" id="wb-upload-input" accept="image/*" style="display:none">
+        </div>
+        <div class="panel" id="wb-panel">
+          <div class="field"><label>词语</label><input type="text" id="wb-word" placeholder="想记的词语"></div>
+          <div class="field"><label>释义 / 备注</label><input type="text" id="wb-meaning" placeholder="含义、例句或备注"></div>
+          <div class="grid2">
+            <div class="field"><label>分类</label>
+              <select id="wb-cat">
+                <option>未分类</option><option>成语</option><option>诗词</option><option>名言</option><option>英语</option><option>专业术语</option><option>其他</option>
+              </select>
+            </div>
+            <div class="field"><label>来源（可选）</label><input type="text" id="wb-source" placeholder="出处 / 作者"></div>
+          </div>
+          <button class="btn btn-primary" id="wb-save">保存</button>
+          <button class="btn btn-sm" id="wb-cancel" style="margin-left:8px;">取消</button>
+        </div>
+        <div class="chips" id="wb-chips"></div>
+        <div class="list" id="wb-list"></div>
+      </section>
+
     </div>
   </div>
 </div>
@@ -1009,7 +1045,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-08-28v';
+const BUILD_VERSION = '2026-08-26w';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -1191,8 +1227,8 @@ function switchModule(mod, source) {
   });
 
   if (mod === 'other') {
-    // 其他：合并展示「健身」+「待买」
-    ['fitness', 'wishlist'].forEach(m => {
+    // 其他：合并展示「健身」+「待买」+「词语积累」
+    ['fitness', 'wishlist', 'wordbank'].forEach(m => {
       const t = document.getElementById(`mod-${m}`);
       if (!t) return;
       void t.offsetWidth;
@@ -1216,11 +1252,12 @@ function switchModule(mod, source) {
 }
 
 function loadModule(mod) {
-  const loaders = { overview: loadOverview, finance: loadFinance, habits: loadHabits, fitness: loadFitness, wishlist: loadWishlist, read: loadDailyRead };
+  const loaders = { overview: loadOverview, finance: loadFinance, habits: loadHabits, fitness: loadFitness, wishlist: loadWishlist, wordbank: loadWordbank, read: loadDailyRead };
   if (mod === 'other') {
-    // 其他页：同时加载健身与待买
+    // 其他页：同时加载健身、待买与词语积累
     loadFitness();
     loadWishlist();
+    loadWordbank();
     return;
   }
   if (loaders[mod]) loaders[mod]();
@@ -2059,6 +2096,94 @@ async function saveWL(data) {
 }
 
 // ============================================================
+// 词语积累
+// ============================================================
+let wbActiveCat = '全部'; // 当前分类筛选
+
+async function loadWordbank() {
+  try {
+    const items = await sbQuery('wordbank', { order: 'created_at desc', limit: 200 });
+    const cats = ['全部', ...Array.from(new Set((items || []).map(i => i.category || '未分类')))];
+    const active = wbActiveCat || '全部';
+    $('wb-chips').innerHTML = cats.map(c => `<button class="chip ${c === active ? 'active' : ''}" onclick="filterWB('${esc(c)}')">${esc(c)}</button>`).join('');
+    // 统计卡片
+    $('wb-stats').innerHTML = [
+      { label: '收藏总数', value: (items || []).length, cls: 'stat-blue' },
+      { label: '分类数', value: Math.max(0, cats.length - 1), cls: 'stat-purple' }
+    ].map(s => `<div class="stat ${s.cls}"><div class="stat-label">${s.label}</div><div class="stat-value">${s.value}</div></div>`).join('');
+    renderWBList(items || [], active);
+  } catch(e) {
+    console.error('Wordbank error:', e);
+    showBanner('词语积累加载失败');
+  }
+}
+
+function filterWB(c) {
+  wbActiveCat = c;
+  loadWordbank();
+}
+
+function renderWBList(items, filter) {
+  let filtered = items;
+  if (filter && filter !== '全部') filtered = items.filter(i => (i.category || '未分类') === filter);
+  $('wb-list').innerHTML = filtered.map(i => `
+    <div class="item">
+      <div class="item-body">
+        <div class="item-title">${esc(i.word)}</div>
+        ${i.meaning ? `<div class="item-meta"><span>${esc(i.meaning)}</span></div>` : ''}
+        <div class="item-meta">
+          <span class="tag">${esc(i.category || '未分类')}</span>
+          ${i.source ? `<span class="tag tag-sage">${esc(i.source)}</span>` : ''}
+        </div>
+      </div>
+      <div class="item-actions">
+        <button class="linkbtn" onclick="deleteWB('${i.id}')">删除</button>
+      </div>
+    </div>
+  `).join('') || emptyState('book', '词语库还是空的', '收藏一个想记住的词语吧', '手动添加', "$('wb-panel').classList.add('open')");
+}
+
+async function saveWB(data) {
+  try { await sbInsert('wordbank', data); toast('已添加'); await loadWordbank(); }
+  catch(e) { toast('保存失败：' + (e.message || e)); }
+}
+
+async function deleteWB(id) {
+  if (!await confirmDialog('删除这个词？')) return;
+  try { await sbDelete('wordbank', id); toast('已删除'); await loadWordbank(); }
+  catch(e) { toast('删除失败'); }
+}
+
+async function recognizeWord(dataUrl) {
+  toast('正在识别词语...', 'info');
+  const prompt = '请识别图片中的词语、生字或成语，提取词语和释义。格式：{"word":"词语","meaning":"释义说明"}。只返回JSON。若图片中有多个词，取最显眼的一个。';
+  const { ok, content, error } = await recognizeImage(dataUrl, prompt);
+  if (!ok) { toast('识别失败：' + error, 'error'); return; }
+  try {
+    const match = content.match(/\{[\s\S]*\}/);
+    if (match) {
+      const j = JSON.parse(match[0]);
+      if (j.word) $('wb-word').value = j.word;
+      if (j.meaning) $('wb-meaning').value = j.meaning;
+      $('wb-panel').classList.add('open');
+      toast('已识别，请核对后保存', 'success');
+    } else {
+      toast('未识别到词语（AI 返回非 JSON）', 'warning');
+    }
+  } catch(e) { toast('解析失败：' + (e.message || e), 'error'); }
+}
+
+// 每日一读名句卡片「＋ 收藏」：一键写入词语积累（分类默认「名句」，来源=作者）
+async function addToWordbank(word, author) {
+  if (!word) return;
+  try {
+    await sbInsert('wordbank', { word, meaning: '', category: '名句', source: author || '', created_at: new Date().toISOString() });
+    toast('已收藏到词语积累 ✓');
+    if (currentModule === 'wordbank') await loadWordbank();
+  } catch(e) { toast('收藏失败：' + (e.message || e)); }
+}
+
+// ============================================================
 // 每日一读
 // ============================================================
 
@@ -2277,6 +2402,7 @@ function renderReadContent(tab, data) {
         <div class="daily-footer">
           ${quote.source ? `来源：${esc(quote.source)}` : ''}
           ${quote.url ? `<br><a href="${esc(quote.url)}" target="_blank">前往古诗文网查看原篇及完整释义 ↗</a>` : ''}
+          <button class="linkbtn wb-add-quote" data-w="${esc(quote.quote)}" data-a="${esc(quote.author || '')}" style="margin-left:8px;">＋ 收藏到词语积累</button>
         </div>
       </div>` : ''}
 
@@ -2501,6 +2627,26 @@ function bindEvents() {
     if (!name) { toast('请输入商品名称'); return; }
     await saveWL({ name, price: parseFloat($('wl-price').value) || null, priority: $('wl-priority').value, category: $('wl-cat').value, note: $('wl-note').value.trim(), purchased: false, created_at: new Date().toISOString() });
     $('wl-name').value = ''; $('wl-price').value = ''; $('wl-note').value = ''; $('wl-panel').classList.remove('open');
+  });
+
+  // 词语积累
+  bind('wb-add-btn', 'click', () => $('wb-panel').classList.toggle('open'));
+  bind('wb-cancel', 'click', () => $('wb-panel').classList.remove('open'));
+  bind('wb-camera-btn', 'click', () => $('wb-camera-input').click());
+  bind('wb-upload-btn', 'click', () => $('wb-upload-input').click());
+  bind('wb-camera-input', 'change', async e => { const f = e.target.files[0]; if (f) { const d = await compressImage(f); if (d) await recognizeWord(d); } });
+  bind('wb-upload-input', 'change', async e => { const f = e.target.files[0]; if (f) { const d = await compressImage(f); if (d) await recognizeWord(d); } });
+  bind('wb-save', 'click', async () => {
+    const word = $('wb-word').value.trim();
+    if (!word) { toast('请输入词语'); return; }
+    await saveWB({ word, meaning: $('wb-meaning').value.trim(), category: $('wb-cat').value, source: $('wb-source').value.trim(), created_at: new Date().toISOString() });
+    $('wb-word').value = ''; $('wb-meaning').value = ''; $('wb-source').value = ''; $('wb-panel').classList.remove('open');
+  });
+
+  // 每日一读名句卡片「＋ 收藏」——事件委托，避免模板字符串转义问题
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.wb-add-quote');
+    if (b) addToWordbank(b.dataset.w, b.dataset.a);
   });
 }
 
