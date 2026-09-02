@@ -1045,7 +1045,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-08-31a';
+const BUILD_VERSION = '2026-09-02a';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -2101,17 +2101,13 @@ async function saveWL(data) {
 // 词语积累
 // ============================================================
 let wbActiveCat = '全部'; // 当前分类筛选
-// 已收藏词语的本地缓存（供 addToWordbank 去重；由 loadWordbank 刷新）
-let _wbCache = new Set();
 
 async function loadWordbank() {
   try {
     const items = await sbQuery('wordbank', { order: 'created_at desc', limit: 200 });
     const cats = ['全部', ...Array.from(new Set((items || []).map(i => i.category || '未分类')))];
     const active = wbActiveCat || '全部';
-    // 顺带刷新去重缓存，保证与库内数据一致
-    _wbCache = new Set((items || []).map(i => String(i.word || '').trim()).filter(Boolean));
-    $('wb-chips').innerHTML = cats.map(c => `<button class="chip ${c === active ? 'active' : ''}" onclick="filterWB('${escAttr(c)}')">${esc(c)}</button>`).join('');
+    $('wb-chips').innerHTML = cats.map(c => `<button class="chip ${c === active ? 'active' : ''}\" onclick="filterWB('${escAttr(c)}')">${esc(c)}</button>`).join('');
     // 统计卡片
     $('wb-stats').innerHTML = [
       { label: '收藏总数', value: (items || []).length, cls: 'stat-blue' },
@@ -2180,28 +2176,29 @@ async function recognizeWord(dataUrl) {
 }
 
 // 每日一读名句卡片「＋ 收藏」：一键写入词语积累（分类默认「名句」，来源=作者）
+// 去重：先查库；遇 4xx/5xx 网络抖动则直接尝试插入；如撞 word UNIQUE 约束 → 提示已存在
 async function addToWordbank(word, author) {
   if (!word) return;
   const w = String(word).trim();
   if (!w) return;
   try {
-    // 去重：先查本地缓存，未命中再查库（连点/重复名句只会存一份）
-    if (!_wbCache.has(w)) {
-      const exist = await sbQuery('wordbank', { filter: { property: 'word', operator: 'eq', value: w }, limit: 1 });
-      if (Array.isArray(exist) && exist.length > 0) {
-        _wbCache.add(w);
-        toast('这个词已经在词语积累里了 ✓');
-        return;
-      }
-    } else {
+    const exist = await sbQuery('wordbank', { filter: { property: 'word', operator: 'eq', value: w }, limit: 1 });
+    if (Array.isArray(exist) && exist.length > 0) {
       toast('这个词已经在词语积累里了 ✓');
       return;
     }
     await sbInsert('wordbank', { word: w, meaning: '', category: '名句', source: author || '', created_at: new Date().toISOString() });
-    _wbCache.add(w);
     toast('已收藏到词语积累 ✓');
     if (currentModule === 'wordbank') await loadWordbank();
-  } catch(e) { toast('收藏失败：' + (e.message || e)); }
+  } catch(e) {
+    // 数据库 UNIQUE 约束兜底：撞唯一约束等价于"已存在"
+    const msg = String(e && e.message || '');
+    if (/duplicate|unique|409/i.test(msg)) {
+      toast('这个词已经在词语积累里了 ✓');
+    } else {
+      toast('收藏失败：' + msg);
+    }
+  }
 }
 
 // ============================================================

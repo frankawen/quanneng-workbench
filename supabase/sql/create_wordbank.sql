@@ -9,7 +9,9 @@ create table if not exists public.wordbank (
   meaning     text default '',                                 -- 释义 / 备注
   category    text default '未分类',                           -- 词语分类（成语/诗词/名言/英语/专业术语/其他…）
   source      text default '',                                 -- 来源（出处 / 作者）
-  created_at  timestamptz default now()                        -- 写入时间
+  created_at  timestamptz default now(),                       -- 写入时间
+  -- 同一词语不允许重复入库（数据库兜底去重）
+  constraint  wordbank_word_unique unique (word)
 );
 
 -- 索引：按写入时间倒序取最新；按分类筛选
@@ -23,3 +25,18 @@ drop policy if exists "wordbank anon all" on public.wordbank;
 create policy "wordbank anon all"
   on public.wordbank for all
   using (true) with check (true);
+
+-- 兜底升级：给已建好的表补 UNIQUE 约束（之前建过表的话）
+-- 多次执行安全（已存在约束时跳过）
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'wordbank_word_unique'
+  ) then
+    -- 先去重（同一词保留最早一条）
+    delete from public.wordbank a
+      using public.wordbank b
+      where a.word = b.word and a.created_at > b.created_at;
+    alter table public.wordbank add constraint wordbank_word_unique unique (word);
+  end if;
+end$$;
