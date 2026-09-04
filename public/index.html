@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
+<html lang="zh-CN" data-page-node-id="TgBevbXiQMp6CpdmjZU7qv">
+<head data-page-node-id="ybJ1pgC13boJma8TND65Bj">
+<meta charset="UTF-8" data-page-node-id="l8ySqFCckHGoaAumMJhjiq">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" data-page-node-id="FXd6lYafbyg8wSWVG2Ml6U">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" data-page-node-id="dJQCdn4Nmhzubgzoi8vEFN">
+<meta http-equiv="Pragma" content="no-cache" data-page-node-id="NYe8Ie2s2lvBw5Ibc7jkB6">
+<meta http-equiv="Expires" content="0" data-page-node-id="GfP4NGitq8NZqVMDgoFNxs">
 <title>全能工作台</title>
-<link rel="icon" type="image/x-icon" href="favicon.ico">
-<link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-<link rel="apple-touch-icon" sizes="180x180" href="favicon-192.png">
+<link rel="icon" type="image/x-icon" href="favicon.ico" data-page-node-id="bVOvoGbLbPUv5NJoxtt8zE">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png" data-page-node-id="urkqtHJ6MPCpVeJh8NBYus">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" data-page-node-id="Aj7rw4VwvqZG2y6rkYCR3s">
+<link rel="apple-touch-icon" sizes="180x180" href="favicon-192.png" data-page-node-id="cgGEtPygG9tDjbJ4Nj9HXs">
 <style>
 :root {
   --paper: #FAF7F2;
@@ -517,6 +517,10 @@ canvas { width: 100% !important; height: 100% !important; }
 .news-section-name { font-size: 15px; font-weight: 600; color: var(--ink); }
 .news-section-count { font-size: 12px; color: var(--ink-faint); margin-left: auto; }
 
+/* 新闻简报（单信息流，去板块切换） */
+.news-brief { display: flex; flex-direction: column; gap: 14px; }
+.news-source-badge { display: inline-block; font-size: 11px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 1px 8px; border-radius: var(--radius-sm); flex-shrink: 0; }
+
 /* 手机端：左侧垂直导航（贴左下角）+ 右侧内容区，与网页版一致 */
 @media (max-width: 600px) {
   .news-mag {
@@ -801,311 +805,311 @@ canvas { width: 100% !important; height: 100% !important; }
 }
 </style>
 </head>
-<body>
-<div class="app">
+<body data-page-node-id="Mh76GurxtH73NVGltMMHxd">
+<div class="app" data-page-node-id="iI7YQrBTdWWT8UIZ30Z39p">
   <!-- 侧边栏 -->
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="brand-name">全能工作台</div>
-      <div class="brand-sub">LIFE · WORKSPACE</div>
+  <aside class="sidebar" data-page-node-id="NKSZwYDjylBMDTApL7lvpW">
+    <div class="brand" data-page-node-id="N4kcqCx71NJJbtWlOHpWN8">
+      <div class="brand-name" data-page-node-id="UQ2K1K0YPiJllgAkVlymOt">全能工作台</div>
+      <div class="brand-sub" data-page-node-id="OsoejFgkrnlrSeYepRR8uB">LIFE · WORKSPACE</div>
     </div>
-    <nav class="nav">
-      <button class="nav-btn active" data-mod="overview">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>
+    <nav class="nav" data-page-node-id="cd3c7TuxBD0GZZxfjczVOK">
+      <button class="nav-btn active" data-mod="overview" data-page-node-id="ogKuq0NPkeGXdqWyT1znPk">
+        <svg viewBox="0 0 24 24" data-page-node-id="KGAoaAcimRQYtQBWlQBUD3"><circle cx="12" cy="12" r="4" data-page-node-id="xsO5nDMC19NWrDGgF6LO5O"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" data-page-node-id="Ky6czNdQ0yMq4nFWIJI2rp"/></svg>
         今日概览
       </button>
 
-      <button class="nav-btn" data-mod="read">
-        <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      <button class="nav-btn" data-mod="read" data-page-node-id="VeyFcImniHh1f1lsqRaPOY">
+        <svg viewBox="0 0 24 24" data-page-node-id="Ab04GEVEErvgwcThp9hC1Z"><path d="M4 19.5A2.5 2.5 0 016.5 17H20" data-page-node-id="wIU4ZXlnZF98lKpDw0QoZR"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" data-page-node-id="ObjOcjuFIeQ9MHS52e2nsP"/></svg>
         每日一读
       </button>
 
-      <button class="nav-btn" data-mod="finance">
-        <svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="M8 16l3-4 3 2 4-6"/></svg>
+      <button class="nav-btn" data-mod="finance" data-page-node-id="gT4ZL4UUgOzhs5cPPJisw2">
+        <svg viewBox="0 0 24 24" data-page-node-id="jERhEL3z7i3q4PKfbeba34"><path d="M4 19V5M4 19h16" data-page-node-id="q8PgVv1daw3NpCukKTHWVG"/><path d="M8 16l3-4 3 2 4-6" data-page-node-id="LmCJTyXJl74D2MpuxNYLwL"/></svg>
         记账理财
       </button>
-      <button class="nav-btn" data-mod="habits">
-        <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      <button class="nav-btn" data-mod="habits" data-page-node-id="FdkC3d0njWoKLN9rQEAK8b">
+        <svg viewBox="0 0 24 24" data-page-node-id="BtMTygzUxig538StIlxYY3"><path d="M9 11l3 3L22 4" data-page-node-id="1vhdZkpAUD4GLayZ738YYd"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" data-page-node-id="oEFDJuH4myRU0y1kkYwkFn"/></svg>
         习惯健康
       </button>
-      <button class="nav-btn" data-mod="fitness">
-        <svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      <button class="nav-btn" data-mod="fitness" data-page-node-id="rXVeOch1mKn7MN1MYLleo4">
+        <svg viewBox="0 0 24 24" data-page-node-id="ChklevoBK1ikRC2TajM0hn"><path d="M18 20V10M12 20V4M6 20v-6" data-page-node-id="7k2uXfIrcmZZRPE5lnEHjx"/></svg>
         减脂健身
       </button>
-      <button class="nav-btn" data-mod="wishlist">
-        <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
+      <button class="nav-btn" data-mod="wishlist" data-page-node-id="dGLdEl1I0IYCHimZxjFdTX">
+        <svg viewBox="0 0 24 24" data-page-node-id="xlpaJBiSRaAO6NQd9DAK7P"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0" data-page-node-id="W1Ea0LeD8pf8tTfIVjxLCZ"/></svg>
         待买清单
       </button>
-      <button class="nav-btn" data-mod="wordbank">
-        <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M9 7h7M9 11h7M9 15h4"/></svg>
+      <button class="nav-btn" data-mod="wordbank" data-page-node-id="s94sdqsm7SrPUnxa8bQmgI">
+        <svg viewBox="0 0 24 24" data-page-node-id="pFRb46XIsCnfGF4fXIx3Is"><path d="M4 19.5A2.5 2.5 0 016.5 17H20" data-page-node-id="lr0aU8GO6kJXtooBzgmLuA"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" data-page-node-id="KYI4BIT160VaTOW0C2GC1o"/><path d="M9 7h7M9 11h7M9 15h4" data-page-node-id="bsiag1F38iYCBETs5d3OdZ"/></svg>
         词语积累
       </button>
     </nav>
-    <div class="side-foot">数据存于云端 · 多端同步<br>新增/修改/删除即时写回<br><span id="build-stamp"></span></div>
+    <div class="side-foot" data-page-node-id="l7qlgomWknizeXWDZylaMi">数据存于云端 · 多端同步<br data-page-node-id="lxYwSURlep160Kjb4EKx3l">新增/修改/删除即时写回<br data-page-node-id="Wxx6GJBJMhDQ4dYVV0U7WH"><span id="build-stamp" data-page-node-id="wi3wb5aOY14TpGYmK2AKuq"></span></div>
   </aside>
 
   <!-- 主内容 -->
-  <div class="main">
-    <div class="topbar">
-      <div class="brand-name" style="font-size:16px;">全能工作台</div>
-      <button class="btn btn-sm" onclick="refreshCurrent()" style="margin-left:auto;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0115-6.7L21 8M21 3v5h-5M21 12a9 9 0 01-15 6.7L3 16M3 21v-5h5"/></svg>
+  <div class="main" data-page-node-id="6PSR35pAMCwv5GabpjT1gK">
+    <div class="topbar" data-page-node-id="ZVys365F3EpCu2YpjnbSxs">
+      <div class="brand-name" style="font-size:16px;" data-page-node-id="Eb2yVTW04JHEiawKqCEtPP">全能工作台</div>
+      <button class="btn btn-sm" onclick="refreshCurrent()" style="margin-left:auto;" data-page-node-id="XYZfG8or2sgiHhOHEAReic">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" data-page-node-id="0ZBplOOvkiB64dkLr94oBF"><path d="M3 12a9 9 0 0115-6.7L21 8M21 3v5h-5M21 12a9 9 0 01-15 6.7L3 16M3 21v-5h5" data-page-node-id="L0zQMhKWxVGW9Ls6qZOXoV"/></svg>
         刷新
       </button>
     </div>
 
-    <div class="content">
+    <div class="content" data-page-node-id="q8ryqabFxnhrvR0t0J1Su8">
       <!-- 错误提示 -->
-      <div class="banner" id="banner">
-        <span id="banner-msg">加载失败</span>
-        <button class="btn btn-sm" onclick="retryLoad()">重试</button>
+      <div class="banner" id="banner" data-page-node-id="duz3t8KoBfKU3fDEAWJeb0">
+        <span id="banner-msg" data-page-node-id="sTbfYU5sqoYBd3QkxX97JA">加载失败</span>
+        <button class="btn btn-sm" onclick="retryLoad()" data-page-node-id="4lCECLQZm9OO7RPVaDuAjT">重试</button>
       </div>
 
       <!-- ========== 今日概览 ========== -->
-      <section class="module active" id="mod-overview">
-        <div class="mhead">
-          <h1>今日概览</h1>
-          <p id="today-date"></p>
+      <section class="module active" id="mod-overview" data-page-node-id="1WI8q8NHH9qZAyKhw499UV">
+        <div class="mhead" data-page-node-id="dtyqRXTfvXaSvmzkItvsxB">
+          <h1 data-page-node-id="vMHmizjDJpO5iVq6T6h2WV">今日概览</h1>
+          <p id="today-date" data-page-node-id="3PZfXjg5hJ41Qzgq93qwqv"></p>
         </div>
         <!-- ① Hero 动态问候卡片 -->
-        <div class="hero-card morning" id="hero-card">
-          <div class="hero-greet">☀️ GOOD MORNING</div>
-          <div class="hero-title" id="greet-title">早安</div>
-          <div class="hero-sub">
-            <span id="greet-text">开启元气满满的一天</span>
-            <span id="hero-date" style="font-size:12px;"></span>
+        <div class="hero-card morning" id="hero-card" data-page-node-id="PGRVDA81MZfugibRV8GBPz">
+          <div class="hero-greet" data-page-node-id="Bc7PIKcNCuGbLfK8HQOrpl">☀️ GOOD MORNING</div>
+          <div class="hero-title" id="greet-title" data-page-node-id="nvfb05ILupTwbnodF0M06D">早安</div>
+          <div class="hero-sub" data-page-node-id="AX9CvfjH683rg0GaBzwBez">
+            <span id="greet-text" data-page-node-id="NxfOVQ1CyAc2iHSSvUHclv">开启元气满满的一天</span>
+            <span id="hero-date" style="font-size:12px;" data-page-node-id="YzURe7aGRWdZzvoeXwlxxF"></span>
           </div>
-          <div class="hero-deco">
-            <svg viewBox="0 0 120 120">
-              <circle cx="60" cy="60" r="30"/>
-              <circle cx="60" cy="60" r="45" stroke-dasharray="4 6"/>
-              <circle cx="60" cy="60" r="20" stroke-dasharray="3 5"/>
-              <path d="M60 5v10M60 105v10M5 60h10M105 60h10M22 22l7 7M91 91l7 7M98 22l-7 7M29 91l-7 7"/>
+          <div class="hero-deco" data-page-node-id="yvwoQiQzoQdMhW7hfQGKlF">
+            <svg viewBox="0 0 120 120" data-page-node-id="V94mnXS75tyrFnGVyFIq6a">
+              <circle cx="60" cy="60" r="30" data-page-node-id="nsphUuegfDM7mZyOuyhoaU"/>
+              <circle cx="60" cy="60" r="45" stroke-dasharray="4 6" data-page-node-id="y2Mt8tXAaBDZBbP49EUUUr"/>
+              <circle cx="60" cy="60" r="20" stroke-dasharray="3 5" data-page-node-id="M8vcwut5ApQX37wE3o0VrV"/>
+              <path d="M60 5v10M60 105v10M5 60h10M105 60h10M22 22l7 7M91 91l7 7M98 22l-7 7M29 91l-7 7" data-page-node-id="L1GTJPE4HUGrcR5xlREzDR"/>
             </svg>
           </div>
         </div>
-        <div class="stats" id="overview-stats"></div>
-        <div class="card">
-          <div class="card-title">今天要处理</div>
-          <div id="today-todo"></div>
+        <div class="stats" id="overview-stats" data-page-node-id="RHEqN2Dyvr6Ro62DzVLKrI"></div>
+        <div class="card" data-page-node-id="YvYtPPujSwLDfjlIUCxRWA">
+          <div class="card-title" data-page-node-id="FVMATDVKd2LXQWyMQ4znuq">今天要处理</div>
+          <div id="today-todo" data-page-node-id="9lYlvHJD84obZjvtnb2Q7f"></div>
         </div>
       </section>
 
       <!-- ========== 每日一读 ========== -->
-      <section class="module" id="mod-read">
-        <div class="mhead">
-          <h1>每日一读</h1>
-          <p>学习强国 · 每日一读，点链接前往官方阅读，平台不再自动采集。</p>
+      <section class="module" id="mod-read" data-page-node-id="7nQFmhI3fPUYFugCYLZFwa">
+        <div class="mhead" data-page-node-id="7uOSWlHJHG35R0bYQq1hJK">
+          <h1 data-page-node-id="oMJpQhLixcEyV5mMBd2kVM">每日一读</h1>
+          <p data-page-node-id="iHO8yvcF5XiSBZNemArefM">学习强国 · 每日一读，点链接前往官方阅读，平台不再自动采集。</p>
         </div>
-        <div class="chips" id="read-tabs">
-          <button class="chip active" data-tab="news">新闻</button>
-          <button class="chip" data-tab="daily">每日一读</button>
+        <div class="chips" id="read-tabs" data-page-node-id="4Z6wH01l8kIdeXA7ts14ZA">
+          <button class="chip active" data-tab="news" data-page-node-id="tjnKlIAk9kNYzBWuO0mgwB">新闻</button>
+          <button class="chip" data-tab="daily" data-page-node-id="XWTrTcVEUp7QdgW4MPFYvM">每日一读</button>
         </div>
-        <div id="read-content"></div>
+        <div id="read-content" data-page-node-id="ugKyALVkkZMp5xQZ5AOcpx"></div>
       </section>
 
 
       <!-- ========== 记账理财 ========== -->
-      <section class="module" id="mod-finance">
-        <div class="mhead">
-          <h1>记账理财</h1>
-          <p>收支记录、预算设置、消费结构一目了然</p>
+      <section class="module" id="mod-finance" data-page-node-id="tq8kGkVQChC1Vxxp8vDt2g">
+        <div class="mhead" data-page-node-id="ljEHJWFvPfmKsBBnWA5Hew">
+          <h1 data-page-node-id="jzhLCy89VDaZoeQ8PHq79s">记账理财</h1>
+          <p data-page-node-id="vgqPKZ5mJE6JUdkeTKHhwv">收支记录、预算设置、消费结构一目了然</p>
         </div>
-        <div class="stats" id="finance-stats"></div>
-        <div class="addrow">
-          <button class="btn btn-primary btn-sm" id="fn-add-btn">＋ 记一笔</button>
-          <button class="btn btn-sm" id="fn-budget-btn">设置预算</button>
-          <button class="btn btn-sm" id="fn-snap-btn">📷 拍照识图</button>
-          <input type="file" id="fn-snap-input" accept="image/*" style="display:none">
+        <div class="stats" id="finance-stats" data-page-node-id="S6r2DYnUPAlXqKVoRC6166"></div>
+        <div class="addrow" data-page-node-id="mryDIh8K0xOKsUKoRiq9A3">
+          <button class="btn btn-primary btn-sm" id="fn-add-btn" data-page-node-id="PUoUGq7CWFfAJRKesszARF">＋ 记一笔</button>
+          <button class="btn btn-sm" id="fn-budget-btn" data-page-node-id="EKbQw4glw5I4RQdNPbhvrr">设置预算</button>
+          <button class="btn btn-sm" id="fn-snap-btn" data-page-node-id="7BDc8oCqrbAQm1deAFSHR5">📷 拍照识图</button>
+          <input type="file" id="fn-snap-input" accept="image/*" style="display:none" data-page-node-id="2Md1WQeircNd31qa09XMPl">
         </div>
-        <div class="panel" id="fn-panel">
-          <div class="grid3">
-            <div class="field"><label>类型</label><select id="fn-type"><option value="支出">支出</option><option value="收入">收入</option></select></div>
-            <div class="field"><label>金额（¥）</label><input type="number" id="fn-amt" placeholder="0.00" step="0.01" min="0"></div>
-            <div class="field"><label>分类</label><select id="fn-cat"><option>餐饮</option><option>交通</option><option>购物</option><option>娱乐</option><option>医疗</option><option>教育</option><option>工资</option><option>其他</option></select></div>
+        <div class="panel" id="fn-panel" data-page-node-id="7GeZm4OPmZZagH9XKxdGiI">
+          <div class="grid3" data-page-node-id="iuI0jgd0pwZuKP2NqEFC77">
+            <div class="field" data-page-node-id="7GDXHHA7Ot7RDx5ao2IymE"><label data-page-node-id="uhiSChzg3TgiliBK50aYZo">类型</label><select id="fn-type" data-page-node-id="OhxfVvYqou90m9ZaRnwba6"><option value="支出" data-page-node-id="GD7FmHPcXJic7F1SFMtGNp">支出</option><option value="收入" data-page-node-id="cEjjowMMzcwJn89RTtLMQk">收入</option></select></div>
+            <div class="field" data-page-node-id="NnnUcX1pGjdf5CBVVNVLdO"><label data-page-node-id="A808p8A5QZkqmxEdc1YxGi">金额（¥）</label><input type="number" id="fn-amt" placeholder="0.00" step="0.01" min="0" data-page-node-id="oUJxeTjQu2tqIZou6Je0wR"></div>
+            <div class="field" data-page-node-id="gCmexOTbwn88zFH9r8zec4"><label data-page-node-id="34lQrrvg92HBwn41K2CFBF">分类</label><select id="fn-cat" data-page-node-id="FMHd5OBEqYdsAytkIspDBX"><option data-page-node-id="N5hr9jsE9ELDfOC5brPXVA">餐饮</option><option data-page-node-id="WCyA4H7l9OMacwwxBd9AA5">交通</option><option data-page-node-id="suUbb7wkhpZDimEm7MuTqN">购物</option><option data-page-node-id="c6VUAmDUQVTbxuc8VGYuOp">娱乐</option><option data-page-node-id="qqwDrsdxaET6kqWY7Bf4a6">医疗</option><option data-page-node-id="pUHlIafIVvCJ7B7QN6bnjb">教育</option><option data-page-node-id="Trwin3HoPAEYPjI9VmTC57">工资</option><option data-page-node-id="2YQIeQmaxbcQ1IDt2FKXQ7">其他</option></select></div>
           </div>
-          <div class="field"><label>日期</label><input type="date" id="fn-date"></div>
-          <div class="field"><label>备注</label><input type="text" id="fn-note" placeholder="可选"></div>
-          <button class="btn btn-primary" id="fn-save">保存</button>
-          <button class="btn btn-sm" id="fn-cancel" style="margin-left:8px;">取消</button>
+          <div class="field" data-page-node-id="6IW3hvHJJCO4BENnchx9UB"><label data-page-node-id="vy7kQkQOU3aHeKiXdFWPGb">日期</label><input type="date" id="fn-date" data-page-node-id="VPNj1iDKHmBHp40kCyoGi1"></div>
+          <div class="field" data-page-node-id="9hFmFJ8Gr65BBMcqVroAcA"><label data-page-node-id="v2KPYYX57QIvbqhv9DkalY">备注</label><input type="text" id="fn-note" placeholder="可选" data-page-node-id="0al4GEt4U4uQhWFsxc1Zwt"></div>
+          <button class="btn btn-primary" id="fn-save" data-page-node-id="1iX0ZND55caPQHJMGEbeTw">保存</button>
+          <button class="btn btn-sm" id="fn-cancel" style="margin-left:8px;" data-page-node-id="9e2TKDEcBO6B983aNppJjv">取消</button>
         </div>
-        <div class="panel" id="fn-budget-panel">
-          <div class="field"><label>本月预算（¥）</label><input type="number" id="fn-budget" placeholder="如 3000"></div>
-          <button class="btn btn-primary" id="fn-budget-save">保存预算</button>
-          <button class="btn btn-sm" id="fn-budget-cancel" style="margin-left:8px;">取消</button>
+        <div class="panel" id="fn-budget-panel" data-page-node-id="WxyzmjPAB2dVYq9lE6euUN">
+          <div class="field" data-page-node-id="wYDvpqejKdqjMo6I5SBPse"><label data-page-node-id="eJVCfAUBPPDD0ITyp9Q5fC">本月预算（¥）</label><input type="number" id="fn-budget" placeholder="如 3000" data-page-node-id="2RwfWvaNIJF5Xz9GeAB0lb"></div>
+          <button class="btn btn-primary" id="fn-budget-save" data-page-node-id="ZRF5vTTNBhORBKOSpqHvBb">保存预算</button>
+          <button class="btn btn-sm" id="fn-budget-cancel" style="margin-left:8px;" data-page-node-id="KjVSG9BzrDGRbPd6suoOuf">取消</button>
         </div>
-        <div class="charts">
-          <div class="chart-box">
-            <h3>本月消费结构</h3>
-            <div id="fn-pie" style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:13px;"></div>
+        <div class="charts" data-page-node-id="XPfiO3Z5FmFhJBUg3lAEnO">
+          <div class="chart-box" data-page-node-id="Ia6ep5kAa2ymK8l9LWevFH">
+            <h3 data-page-node-id="t9WHWnaECgQvldChcA7P7C">本月消费结构</h3>
+            <div id="fn-pie" style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:13px;" data-page-node-id="aHCZH0Psey0HKKElrYGGqA"></div>
           </div>
-          <div class="chart-box">
-            <h3>月度对比</h3>
-            <div id="fn-month" style="height:200px;"></div>
+          <div class="chart-box" data-page-node-id="krDWC1wT4vuFKXpArasLs9">
+            <h3 data-page-node-id="yxGIt9UJo6KK7fZz8FFkIu">月度对比</h3>
+            <div id="fn-month" style="height:200px;" data-page-node-id="CTyVMvd2KstJlMkYOhVrh4"></div>
           </div>
         </div>
 
         <!-- ═══ 最近账目 — 标题行 + 分类下拉 ═══ -->
-        <div class="fn-list-header">
-          <h2 class="fn-list-title">最近账目</h2>
-          <select class="fn-cat-select" id="fn-cat-filter" onchange="filterFinance(this.value)">
-            <option value="全部">全部分类</option>
+        <div class="fn-list-header" data-page-node-id="nKMJXsGDhCkU2oyc7uC9Nl">
+          <h2 class="fn-list-title" data-page-node-id="80IXURS7du06sTWE7FOV2q">最近账目</h2>
+          <select class="fn-cat-select" id="fn-cat-filter" onchange="filterFinance(this.value)" data-page-node-id="giBOXUSrwAACmzmHDPyjWx">
+            <option value="全部" data-page-node-id="QVJAyEHMm6PZQMfhWHFoIE">全部分类</option>
           </select>
         </div>
-        <div class="fn-list" id="fn-list"></div>
+        <div class="fn-list" id="fn-list" data-page-node-id="Qed0Fgu9QdOAIEEdRQHQJu"></div>
       </section>
 
       <!-- ========== 习惯健康 ========== -->
-      <section class="module" id="mod-habits">
-        <div class="mhead">
-          <h1>习惯健康</h1>
-          <p>坚持好习惯，记录每一天</p>
+      <section class="module" id="mod-habits" data-page-node-id="4BzogNRqq0GaOEIxDnCM8U">
+        <div class="mhead" data-page-node-id="oyHGFpAkukeqnfMTL1wKvH">
+          <h1 data-page-node-id="zKYGDdFhez8AFvvefA3s6j">习惯健康</h1>
+          <p data-page-node-id="pz9nt6FA0rbsYIzP4VY5m3">坚持好习惯，记录每一天</p>
         </div>
-        <div class="addrow">
-          <button class="btn btn-primary btn-sm" id="habit-add-btn">＋ 新增习惯</button>
+        <div class="addrow" data-page-node-id="FuF12p8NhYQOft1yVPV921">
+          <button class="btn btn-primary btn-sm" id="habit-add-btn" data-page-node-id="gpqNfv0KrNhHCUB5qENH5j">＋ 新增习惯</button>
         </div>
-        <div class="panel" id="habit-panel">
-          <div class="field"><label>习惯名称</label><input type="text" id="habit-name" placeholder="如：早起、喝水、运动"></div>
-          <div class="field"><label>打卡方式</label>
-            <select id="habit-type">
-              <option value="check">勾选打卡</option>
-              <option value="count">计数打卡</option>
-              <option value="value">数值打卡</option>
+        <div class="panel" id="habit-panel" data-page-node-id="G5qesGy4yHZJzciLfHOFPg">
+          <div class="field" data-page-node-id="aKJcA6DPAHo7j8lEQJywrF"><label data-page-node-id="vOSGGCwdEuFxLvsEDppxNl">习惯名称</label><input type="text" id="habit-name" placeholder="如：早起、喝水、运动" data-page-node-id="2ZbiB0Vmwp6DbSAnLqsHGR"></div>
+          <div class="field" data-page-node-id="LRcAFTuDM4PBCKITUaVwdi"><label data-page-node-id="3Z0EKTQhj7RePur5xpU1VA">打卡方式</label>
+            <select id="habit-type" data-page-node-id="47vEFxUnkltOrwH1J3LWBD">
+              <option value="check" data-page-node-id="hUV7nvAgZqw63uYCPb9CEy">勾选打卡</option>
+              <option value="count" data-page-node-id="LQ63P7kaP7jnkIA4cAw5pr">计数打卡</option>
+              <option value="value" data-page-node-id="ll932d09bFOW31xRrOFKnv">数值打卡</option>
             </select>
           </div>
-          <button class="btn btn-primary" id="habit-save">保存</button>
-          <button class="btn btn-sm" id="habit-cancel" style="margin-left:8px;">取消</button>
+          <button class="btn btn-primary" id="habit-save" data-page-node-id="ueFI15EhRnLLYrBv2AIX9v">保存</button>
+          <button class="btn btn-sm" id="habit-cancel" style="margin-left:8px;" data-page-node-id="f8fasyK4gkucRaupV7MlwD">取消</button>
         </div>
-        <div id="habits-list"></div>
+        <div id="habits-list" data-page-node-id="pEyF1nMsHeWPBNe8S65SYv"></div>
 
         <!-- ═══ 热力图区域 — 按习惯分行 ═══ -->
-        <div class="heatmap-section" id="heatmap-section">
-          <div class="heatmap-header">
-            <span class="heatmap-title"><span id="hm-day-count">30</span> 天 热力图</span>
-            <span class="heatmap-hint">手机可横向滑动↔</span>
+        <div class="heatmap-section" id="heatmap-section" data-page-node-id="6XT6KhuInEjre7R8luIxod">
+          <div class="heatmap-header" data-page-node-id="UHtZVmdgQR6c2nJHzvcmwc">
+            <span class="heatmap-title" data-page-node-id="BMukloukeHwDZYqMCxawvD"><span id="hm-day-count" data-page-node-id="JoMy2mJbnNBHLYahoZ8045">30</span> 天 热力图</span>
+            <span class="heatmap-hint" data-page-node-id="kzGt2LDMYjdcEAFio3GhSo">手机可横向滑动↔</span>
           </div>
-          <div class="heatmap-motto">坚持，是有形状的</div>
-          <div class="hm-grid-wrap">
-            <div class="hm-date-row" id="hm-dates"></div>
-            <div class="hm-body" id="hm-rows"></div>
+          <div class="heatmap-motto" data-page-node-id="JVVnu3oFjQz0rpi6L8VeWm">坚持，是有形状的</div>
+          <div class="hm-grid-wrap" data-page-node-id="3CqwPFm5Coq8OOzdoM90Tr">
+            <div class="hm-date-row" id="hm-dates" data-page-node-id="Cf9mZomzAwC8vY2n6KmZDg"></div>
+            <div class="hm-body" id="hm-rows" data-page-node-id="E0ia51EI6luBVPtrk15FDK"></div>
           </div>
         </div>
       </section>
 
       <!-- ========== 减脂健身 ========== -->
-      <section class="module" id="mod-fitness">
-        <div class="mhead">
-          <h1>减脂健身</h1>
-          <p>体重追踪、BMI计算、周计划管理</p>
+      <section class="module" id="mod-fitness" data-page-node-id="2fzDmxHJZguBMe51pdKOz5">
+        <div class="mhead" data-page-node-id="rGNQBuA6aOEm3fXWF5VzQc">
+          <h1 data-page-node-id="eup0hmtVTRL1Kekkbj0QlZ">减脂健身</h1>
+          <p data-page-node-id="NxlDBsfe2X29Jo4PYrfoEB">体重追踪、BMI计算、周计划管理</p>
         </div>
-        <div class="stats" id="fitness-stats"></div>
-        <div class="charts">
-          <div class="chart-box">
-            <h3>7日体重趋势</h3>
-            <canvas id="weight-chart"></canvas>
+        <div class="stats" id="fitness-stats" data-page-node-id="R2Thwh8MhOEwcEBvbvACku"></div>
+        <div class="charts" data-page-node-id="usSSRb4tF8pA6BRZmFFnhS">
+          <div class="chart-box" data-page-node-id="xzei3HCWHIJQVSy9XHLwHK">
+            <h3 data-page-node-id="QHW0Q37X7IAb3kYb1Qbh53">7日体重趋势</h3>
+            <canvas id="weight-chart" data-page-node-id="6vCP7y4VxmQwQF9CWgyZAW"></canvas>
           </div>
-          <div class="chart-box">
-            <h3>BMI 曲线</h3>
-            <canvas id="bmi-chart"></canvas>
+          <div class="chart-box" data-page-node-id="MGBSTUUlvEii0MseXQyB0T">
+            <h3 data-page-node-id="fUVplKGprQIkdjjXTSKWcY">BMI 曲线</h3>
+            <canvas id="bmi-chart" data-page-node-id="QOGrxqFRlye68wL2rI0rt1"></canvas>
           </div>
         </div>
-        <div class="addrow">
-          <button class="btn btn-primary btn-sm" id="fitness-add-btn">＋ 记录体重</button>
-          <button class="btn btn-sm" id="fitness-plan-btn">编辑周计划</button>
+        <div class="addrow" data-page-node-id="BV7QK1xEerW1KMXjXUdHlB">
+          <button class="btn btn-primary btn-sm" id="fitness-add-btn" data-page-node-id="wZ7gfK50todCBnGNiTknmZ">＋ 记录体重</button>
+          <button class="btn btn-sm" id="fitness-plan-btn" data-page-node-id="OYImy9NhGtBqPgnGgHu956">编辑周计划</button>
         </div>
-        <div class="panel" id="fitness-panel">
-          <div class="grid3">
-            <div class="field"><label>体重（kg）</label><input type="number" id="fitness-weight" step="0.1" placeholder="65.5"></div>
-            <div class="field"><label>体脂率（%）</label><input type="number" id="fitness-fat" step="0.1" placeholder="20.5"></div>
-            <div class="field"><label>身高（cm）</label><input type="number" id="fitness-height" step="1" placeholder="175"></div>
+        <div class="panel" id="fitness-panel" data-page-node-id="OwAXzqtfNafHqrzSNKE9tG">
+          <div class="grid3" data-page-node-id="P19jAw6HevVgZvnYSp4PzH">
+            <div class="field" data-page-node-id="WyJFGh8lMupmDNeHHUu1ww"><label data-page-node-id="vPK0Hfo02hIeAB7g1I2zr9">体重（kg）</label><input type="number" id="fitness-weight" step="0.1" placeholder="65.5" data-page-node-id="c3CC4s1iOI2DWF8MYMuzmp"></div>
+            <div class="field" data-page-node-id="GKDbMwFpqCAgaZNWLKHaMB"><label data-page-node-id="lGg9dcuQfinJXlqnVAxboe">体脂率（%）</label><input type="number" id="fitness-fat" step="0.1" placeholder="20.5" data-page-node-id="mxo9gqBcypVuynMgd422Ht"></div>
+            <div class="field" data-page-node-id="O3unj0qniJT3NjmFNaYwQG"><label data-page-node-id="C6l4xGAyeAUl57b4DLrPA8">身高（cm）</label><input type="number" id="fitness-height" step="1" placeholder="175" data-page-node-id="wLMechWu1fAWSJlv7NUgVP"></div>
           </div>
-          <div class="field"><label>备注</label><input type="text" id="fitness-note" placeholder="可选"></div>
-          <button class="btn btn-primary" id="fitness-save">保存</button>
-          <button class="btn btn-sm" id="fitness-cancel" style="margin-left:8px;">取消</button>
+          <div class="field" data-page-node-id="UfiNnISkbMXxVL0MCcPbai"><label data-page-node-id="BmIA0IIixiCaCzofFXUsJS">备注</label><input type="text" id="fitness-note" placeholder="可选" data-page-node-id="AiFOiplBEhrg3BjIY5ljE0"></div>
+          <button class="btn btn-primary" id="fitness-save" data-page-node-id="U411xLrvsaWNB15SeBGTJF">保存</button>
+          <button class="btn btn-sm" id="fitness-cancel" style="margin-left:8px;" data-page-node-id="4fQDGd5emG3H7Rw5ufEmya">取消</button>
         </div>
-        <div class="panel" id="fitness-plan-panel">
-          <div id="plan-list"></div>
-          <div class="addrow" style="margin-top:12px;">
-            <input type="text" id="plan-exercise" placeholder="运动项目" style="flex:1;">
-            <select id="plan-day" style="width:80px;"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select>
-            <button class="btn btn-primary btn-sm" id="plan-add">添加</button>
+        <div class="panel" id="fitness-plan-panel" data-page-node-id="2cgY3s4bSi72I7hkHAyBu7">
+          <div id="plan-list" data-page-node-id="JpQIleFdylwDuoFwUEdF3z"></div>
+          <div class="addrow" style="margin-top:12px;" data-page-node-id="WQcGldWd1AS2xIPsrIntTF">
+            <input type="text" id="plan-exercise" placeholder="运动项目" style="flex:1;" data-page-node-id="BfeV6wE46zbGuziGLlpTnP">
+            <select id="plan-day" style="width:80px;" data-page-node-id="KRndqcmKkfx9seTDOEjDgU"><option data-page-node-id="Hci2lEwXaDjpaLAWS4bdza">1</option><option data-page-node-id="S5X7vpvTLWmHuTPhmpxTjV">2</option><option data-page-node-id="oLn4k4YOT56E0Ebf3dMoU9">3</option><option data-page-node-id="kanLjJ7iTQinB7Dgj98vDG">4</option><option data-page-node-id="n6e7m2KHvpg0eJAop5LW2k">5</option><option data-page-node-id="7Dv9X8YO1N4LypjAB5HIIO">6</option><option data-page-node-id="rCp8l0l7ZZoOUN6KxMrvBQ">7</option></select>
+            <button class="btn btn-primary btn-sm" id="plan-add" data-page-node-id="DLzfgquFS91LIuCBhPPcF3">添加</button>
           </div>
-          <button class="btn btn-sm" id="fitness-plan-cancel" style="margin-top:12px;">取消</button>
+          <button class="btn btn-sm" id="fitness-plan-cancel" style="margin-top:12px;" data-page-node-id="ltmfS2yAHBhEkgZjzyT1gL">取消</button>
         </div>
-        <div class="list" id="fitness-list"></div>
+        <div class="list" id="fitness-list" data-page-node-id="MXBhZA4bA0PAWdu1MI5RKw"></div>
       </section>
 
       <!-- ========== 待买清单 ========== -->
-      <section class="module" id="mod-wishlist">
-        <div class="mhead">
-          <h1>待买清单</h1>
-          <p>记录想买的商品，理性消费不踩坑</p>
+      <section class="module" id="mod-wishlist" data-page-node-id="wpNZ8Sp6jJpthfxgw7Fhw0">
+        <div class="mhead" data-page-node-id="C5Vts6SQECBJVOBswr66xg">
+          <h1 data-page-node-id="TVrDEQbkyJADmPW7jvsHCx">待买清单</h1>
+          <p data-page-node-id="yY9Xe0uL0NiHeGVGL8OHLJ">记录想买的商品，理性消费不踩坑</p>
         </div>
-        <div class="stats" id="wishlist-stats"></div>
-        <div class="addrow">
-          <button class="btn btn-sm" id="wl-camera-btn">📷 拍照识图</button>
-          <button class="btn btn-sm" id="wl-upload-btn">🖼️ 上传图片</button>
-          <button class="btn btn-primary btn-sm" id="wl-add-btn">＋ 手动添加</button>
-          <input type="file" id="wl-camera-input" accept="image/*" style="display:none">
-          <input type="file" id="wl-upload-input" accept="image/*" style="display:none">
+        <div class="stats" id="wishlist-stats" data-page-node-id="yGH4nT33CTdH9ZfLmxRRV5"></div>
+        <div class="addrow" data-page-node-id="D0H9V2NUPiyBCktUwrZhQF">
+          <button class="btn btn-sm" id="wl-camera-btn" data-page-node-id="xEHrnIDWfqA4CJXPeHoDn5">📷 拍照识图</button>
+          <button class="btn btn-sm" id="wl-upload-btn" data-page-node-id="WFbphmqHmVKWmb20Zev4NI">🖼️ 上传图片</button>
+          <button class="btn btn-primary btn-sm" id="wl-add-btn" data-page-node-id="UtAPWaJHCGTzeMamIGQLf6">＋ 手动添加</button>
+          <input type="file" id="wl-camera-input" accept="image/*" style="display:none" data-page-node-id="gBfQ8HINU39mjV3FP1aCni">
+          <input type="file" id="wl-upload-input" accept="image/*" style="display:none" data-page-node-id="Onk0dIjNNbbEyGKsz8ZyqF">
         </div>
-        <div class="panel" id="wl-panel">
-          <div class="grid2">
-            <div class="field"><label>商品名称</label><input type="text" id="wl-name" placeholder="输入商品名称"></div>
-            <div class="field"><label>预估价格（¥）</label><input type="number" id="wl-price" placeholder="0.00" step="0.01" min="0"></div>
+        <div class="panel" id="wl-panel" data-page-node-id="ODQT09ApDA7CIMvoEesEOr">
+          <div class="grid2" data-page-node-id="l7pKCMVlHgG5J4ynTdZqXq">
+            <div class="field" data-page-node-id="oxF57GEQxC9Wj23xtlvFlk"><label data-page-node-id="aj1fA97H60fbNGqOD2AqKK">商品名称</label><input type="text" id="wl-name" placeholder="输入商品名称" data-page-node-id="kAYv9faBGlAhTyvhlxrfOu"></div>
+            <div class="field" data-page-node-id="YxcCpKJotqL1IExEBbslDe"><label data-page-node-id="z5FGRkVK7W8XdDdSnEG5oq">预估价格（¥）</label><input type="number" id="wl-price" placeholder="0.00" step="0.01" min="0" data-page-node-id="6BQJfFBHVYhlW2QWwZuaHM"></div>
           </div>
-          <div class="grid2">
-            <div class="field"><label>优先级</label>
-              <select id="wl-priority">
-                <option value="高">紧急</option>
-                <option value="中">一般</option>
-                <option value="低">不急</option>
+          <div class="grid2" data-page-node-id="nsbKIbrzqa7cBBGJzXgAMU">
+            <div class="field" data-page-node-id="7E58yThLNOrDbAKOrjghZ7"><label data-page-node-id="OrshObArJxE1Ef1qMcuMRV">优先级</label>
+              <select id="wl-priority" data-page-node-id="5qRDlDMGvbRoriMeLnAMca">
+                <option value="高" data-page-node-id="YRhWzh65g1YbTFlEdPcq01">紧急</option>
+                <option value="中" data-page-node-id="GPXmvEynmNToNB7U4o9DyT">一般</option>
+                <option value="低" data-page-node-id="ZC9x2G4MHmzuP4yq9atWZk">不急</option>
               </select>
             </div>
-            <div class="field"><label>分类</label>
-              <select id="wl-cat">
-                <option>日用</option><option>食品</option><option>数码</option><option>服饰</option><option>家居</option><option>其他</option>
+            <div class="field" data-page-node-id="GXSxFqJVOPoLDQ1C3uORfV"><label data-page-node-id="xE5pjkjG4AfC7aSJgxcQk2">分类</label>
+              <select id="wl-cat" data-page-node-id="qGJZo80wuQIjDPc694sCkj">
+                <option data-page-node-id="IDT5asftURLNJD1Mhydsvp">日用</option><option data-page-node-id="yCtiTBM0dxJig7jAD0UrY1">食品</option><option data-page-node-id="nQb8aN6YH6JOwCbT21CMty">数码</option><option data-page-node-id="MLwlSTfFqixy9LLCoGzVpd">服饰</option><option data-page-node-id="EkHDjsbep2l6WVFDBCgaIg">家居</option><option data-page-node-id="VOCGEbXGV7JpdFFyopZFxX">其他</option>
               </select>
             </div>
           </div>
-          <div class="field"><label>备注</label><input type="text" id="wl-note" placeholder="可选"></div>
-          <button class="btn btn-primary" id="wl-save">保存</button>
-          <button class="btn btn-sm" id="wl-cancel" style="margin-left:8px;">取消</button>
+          <div class="field" data-page-node-id="4J7jV1NwbpztBTBPW6Efx6"><label data-page-node-id="OBVJQ03d5O2hLSanImjxvn">备注</label><input type="text" id="wl-note" placeholder="可选" data-page-node-id="puHwXWUm309ehNNv0FO8Ou"></div>
+          <button class="btn btn-primary" id="wl-save" data-page-node-id="fOzRknnF8p4yG4JFJ19Zkj">保存</button>
+          <button class="btn btn-sm" id="wl-cancel" style="margin-left:8px;" data-page-node-id="CmNjiHZpyT7NdI9W9eDtIa">取消</button>
         </div>
-        <div class="chips" id="wl-chips"></div>
-        <div class="list" id="wl-list"></div>
+        <div class="chips" id="wl-chips" data-page-node-id="E7YMZsbUhuTbjkip0lZvai"></div>
+        <div class="list" id="wl-list" data-page-node-id="LkCoeSF1FjFriAFlCXpI6t"></div>
       </section>
 
       <!-- ========== 词语积累 ========== -->
-      <section class="module" id="mod-wordbank">
-        <div class="mhead">
-          <h1>词语积累</h1>
-          <p>收藏想记的词语，支持手动添加、拍照识别、按分类查看</p>
+      <section class="module" id="mod-wordbank" data-page-node-id="dDEWk0vbXtOscf2Xdgznni">
+        <div class="mhead" data-page-node-id="MRizYWl58sz9sHjybdWfQS">
+          <h1 data-page-node-id="9g87VsjVGKENlHcy182u9H">词语积累</h1>
+          <p data-page-node-id="n7K4qLEDDLx4NNHFa22iPJ">收藏想记的词语，支持手动添加、拍照识别、按分类查看</p>
         </div>
-        <div class="stats" id="wb-stats"></div>
-        <div class="addrow">
-          <button class="btn btn-sm" id="wb-camera-btn">📷 拍照识词</button>
-          <button class="btn btn-sm" id="wb-upload-btn">🖼️ 上传图片</button>
-          <button class="btn btn-primary btn-sm" id="wb-add-btn">＋ 手动添加</button>
-          <input type="file" id="wb-camera-input" accept="image/*" style="display:none">
-          <input type="file" id="wb-upload-input" accept="image/*" style="display:none">
+        <div class="stats" id="wb-stats" data-page-node-id="CdQHjsBin3QpBwl6VCJSHN"></div>
+        <div class="addrow" data-page-node-id="cQS4A0nyrbYkY8mGsU3qJr">
+          <button class="btn btn-sm" id="wb-camera-btn" data-page-node-id="StJqcA9L4VF2jzTDKbFFWH">📷 拍照识词</button>
+          <button class="btn btn-sm" id="wb-upload-btn" data-page-node-id="FNYbmE62zHfOKgs88Ug0xX">🖼️ 上传图片</button>
+          <button class="btn btn-primary btn-sm" id="wb-add-btn" data-page-node-id="Ool8OUDWInDbVRju9jgWlB">＋ 手动添加</button>
+          <input type="file" id="wb-camera-input" accept="image/*" style="display:none" data-page-node-id="hvpYwer2FKLVmRXltCEW79">
+          <input type="file" id="wb-upload-input" accept="image/*" style="display:none" data-page-node-id="hUvasFZABEybNMGKZp8FH4">
         </div>
-        <div class="panel" id="wb-panel">
-          <div class="field"><label>词语</label><input type="text" id="wb-word" placeholder="想记的词语"></div>
-          <div class="field"><label>释义 / 备注</label><input type="text" id="wb-meaning" placeholder="含义、例句或备注"></div>
-          <div class="grid2">
-            <div class="field"><label>分类</label>
-              <select id="wb-cat">
-                <option>未分类</option><option>成语</option><option>诗词</option><option>名言</option><option>英语</option><option>专业术语</option><option>其他</option>
+        <div class="panel" id="wb-panel" data-page-node-id="Dwo146HcfOE06KjHETFQKN">
+          <div class="field" data-page-node-id="uEQMYAMxArAmzXcTkp28Xm"><label data-page-node-id="ozLWd6OAbdeDPgL1paQQ2f">词语</label><input type="text" id="wb-word" placeholder="想记的词语" data-page-node-id="erRyKjbYO9zCasVCqO7pS4"></div>
+          <div class="field" data-page-node-id="UExCpKmnoOKMFd2Djow5Bj"><label data-page-node-id="lRwDVOkA7RwpU1lb4RAmOn">释义 / 备注</label><input type="text" id="wb-meaning" placeholder="含义、例句或备注" data-page-node-id="Rt12O9O34XNGmIyF9O5zTk"></div>
+          <div class="grid2" data-page-node-id="b6prM0iajVkfkae41CDTsV">
+            <div class="field" data-page-node-id="6fcYLXbEhgUCkEdl6umMyl"><label data-page-node-id="J4xHKyzFuTQsRntcbHyfqT">分类</label>
+              <select id="wb-cat" data-page-node-id="w9goXAVoIFHsYLGFhLHI7G">
+                <option data-page-node-id="HwCsBstBP9Wm6be35zDTCW">未分类</option><option data-page-node-id="Pt2eSRpKjRGqmsCp6YMJBt">成语</option><option data-page-node-id="4tsV681D66TAmqVKoSwmCp">诗词</option><option data-page-node-id="5VF6VesKq7GAkok8Fin3NI">名言</option><option data-page-node-id="vuvtnXEdrslStnkpbl8HiH">英语</option><option data-page-node-id="QVWNkz4KEnyUqOIjzRYHoC">专业术语</option><option data-page-node-id="NNgA73xSD7mvDHbAX3ZI9d">其他</option>
               </select>
             </div>
-            <div class="field"><label>来源（可选）</label><input type="text" id="wb-source" placeholder="出处 / 作者"></div>
+            <div class="field" data-page-node-id="YTWLqml9qbgMjeHldXHtK7"><label data-page-node-id="aOXvV0TFhuF8cV8bK6pvQl">来源（可选）</label><input type="text" id="wb-source" placeholder="出处 / 作者" data-page-node-id="hs6dYyx7ot6BJ7SZHQlhz6"></div>
           </div>
-          <button class="btn btn-primary" id="wb-save">保存</button>
-          <button class="btn btn-sm" id="wb-cancel" style="margin-left:8px;">取消</button>
+          <button class="btn btn-primary" id="wb-save" data-page-node-id="5OEU2f0jBeF3QmJftF1fST">保存</button>
+          <button class="btn btn-sm" id="wb-cancel" style="margin-left:8px;" data-page-node-id="i2uSFZKWyGYkvYQyhUqj5j">取消</button>
         </div>
-        <div class="chips" id="wb-chips"></div>
-        <div class="list" id="wb-list"></div>
+        <div class="chips" id="wb-chips" data-page-node-id="9jL00XJqULWqVD7DSO59DO"></div>
+        <div class="list" id="wb-list" data-page-node-id="bjDYGgigksHnkr5QST2Gny"></div>
       </section>
 
     </div>
@@ -1113,26 +1117,26 @@ canvas { width: 100% !important; height: 100% !important; }
 </div>
 
 <!-- 移动端底部导航 -->
-<nav class="tabbar">
-  <button class="active" data-mod="overview"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>概览</button>
-  <button data-mod="read"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>一读</button>
-  <button data-mod="finance"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="M8 16l3-4 3 2 4-6"/></svg>记账</button>
-  <button data-mod="habits"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>习惯</button>
-  <button data-mod="other"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>其他</button>
+<nav class="tabbar" data-page-node-id="Awae9uXsnsciBccJ3aHb54">
+  <button class="active" data-mod="overview" data-page-node-id="qSVxmWrhJsqLhNGct1bLup"><svg viewBox="0 0 24 24" data-page-node-id="6zBRkF4zDAwC0A5r2esVNv"><circle cx="12" cy="12" r="4" data-page-node-id="5MOEEpnG448kSYQR8WGD5G"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" data-page-node-id="ODD1zKNJri3T6rpymWYfL0"/></svg>概览</button>
+  <button data-mod="read" data-page-node-id="VD8D2jnC6Oph9uiLB2CWw4"><svg viewBox="0 0 24 24" data-page-node-id="AyH4ysKF2SjvTDL4fbQqn9"><path d="M4 19.5A2.5 2.5 0 016.5 17H20" data-page-node-id="W1nEjMTmUnPqMy1SanzE2r"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" data-page-node-id="iOhke7fLyOw7sGO8nCitkg"/></svg>一读</button>
+  <button data-mod="finance" data-page-node-id="9rLGVepEhmlCE8uTgP7Nwd"><svg viewBox="0 0 24 24" data-page-node-id="Nw1jZ1YAScE7BZHOGRYLTb"><path d="M4 19V5M4 19h16" data-page-node-id="rWf2ps2xh2Nh7j4H9Qz1GD"/><path d="M8 16l3-4 3 2 4-6" data-page-node-id="98wa9EJ24HpCbcMFINAaIG"/></svg>记账</button>
+  <button data-mod="habits" data-page-node-id="9YROARVMK4vGHbfcNpSmAz"><svg viewBox="0 0 24 24" data-page-node-id="3d4CHTx8BwmkuTMaCeqmc9"><path d="M9 11l3 3L22 4" data-page-node-id="UO2qcKgIH3dU9l3XWHVyQH"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" data-page-node-id="bWaukeJSH79aNT8buUwuCj"/></svg>习惯</button>
+  <button data-mod="other" data-page-node-id="7KYboQozqHGtiumT1xBYt9"><svg viewBox="0 0 24 24" data-page-node-id="mmevDjxCXHQjm0R9hfxiJT"><rect x="3" y="3" width="7" height="7" rx="2" data-page-node-id="1IHcBr7OjNUwzzPlB3L7op"/><rect x="14" y="3" width="7" height="7" rx="2" data-page-node-id="hRW5sVe8EJqnjDAMCHoTdV"/><rect x="3" y="14" width="7" height="7" rx="2" data-page-node-id="jiBQki3UJz7iKOAXOxQxLZ"/><rect x="14" y="14" width="7" height="7" rx="2" data-page-node-id="4MDAxQhC9apmFgpgKvTk0f"/></svg>其他</button>
 </nav>
 
-<button class="theme-toggle" id="theme-toggle" aria-label="切换深色或浅色模式" title="切换主题">
-  <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<button class="theme-toggle" id="theme-toggle" aria-label="切换深色或浅色模式" title="切换主题" data-page-node-id="3tOAz296n1yqm0i44q7X9j">
+  <svg viewBox="0 0 24 24" data-page-node-id="KoboYgFn48I2hHaz7CDHai"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" data-page-node-id="0Ngf5xu4IVpk9umJscQkPu"/></svg>
 </button>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" data-page-node-id="5VEFLuNh7PFqMWCnPCNtkM"></div>
 
 <!-- 自定义确认弹窗（替代 confirm()，兼容内嵌/网页视图环境） -->
-<div class="modal-mask" id="confirm-mask">
-  <div class="modal-box">
-    <div class="modal-text" id="confirm-text"></div>
-    <div class="modal-actions">
-      <button class="btn" id="confirm-no">取消</button>
-      <button class="btn btn-primary" id="confirm-yes">确定</button>
+<div class="modal-mask" id="confirm-mask" data-page-node-id="XGvoRtXr0pem5yj0KGT834">
+  <div class="modal-box" data-page-node-id="xA61ZXQrzysyxzATACT9Of">
+    <div class="modal-text" id="confirm-text" data-page-node-id="ATZR8w2GJZJVpqVAFI5alB"></div>
+    <div class="modal-actions" data-page-node-id="lAjWdn3MpFnBzDnKK2CmBg">
+      <button class="btn" id="confirm-no" data-page-node-id="cAcLhxLknpyeBldukmjjs2">取消</button>
+      <button class="btn btn-primary" id="confirm-yes" data-page-node-id="bUaJiQle3JBuvXF7mSKDZl">确定</button>
     </div>
   </div>
 </div>
@@ -1150,7 +1154,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-09-04c';
+const BUILD_VERSION = '2026-09-04d';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -2393,111 +2397,47 @@ function renderReadContent(tab, data) {
   const c = $('read-content');
 
   if (tab === 'news') {
-    // 杂志式版面：板块 Tab + 头条大卡 + 紧凑列表
-    const sections = {};
-    (data.news || []).forEach(n => {
-      const cat = n.category || '快报';
-      if (!sections[cat]) sections[cat] = [];
-      sections[cat].push(n);
-    });
-
-    // 板块定义（图标 + 颜色 + 顺序）
-    const sectionDefs = [
-      { name: '今日热点', icon: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor" stroke="none"/>', color: '#C4704B', bg: '#F2E0D4' },
-      { name: '公司头条', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>', color: '#7A9BB5', bg: '#E6EEF4' },
-      { name: '财经速览', icon: '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>', color: '#C9A84C', bg: '#F5F0DC' },
-      { name: '时事追踪', icon: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/>', color: '#6B8E7B', bg: '#E8F0EC' },
-      { name: '快报', icon: '<path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/>', color: '#9A9085', bg: '#F3EDE4' }
-    ];
-
-    const available = sectionDefs.filter(d => sections[d.name] && sections[d.name].length > 0);
-    if (available.length === 0) {
+    // 新闻简报：单一信息流（中新网为主 + 少数派点缀），去掉板块切换
+    const items = (data.news || []).slice().sort((a, b) => (b.crawled_at || '').localeCompare(a.crawled_at || ''));
+    if (!items.length) {
       c.innerHTML = emptyState('newspaper', '暂无新闻', '新闻数据正在路上，请稍后刷新');
       return;
     }
-
-    // 默认显示第一个板块
-    const activeSection = available[0].name;
-    const renderSection = (name) => {
-      const def = sectionDefs.find(d => d.name === name);
-      const items = (sections[name] || []).slice().sort((a,b) => (b.crawled_at||'').localeCompare(a.crawled_at||''));
-      const hero = items[0];
-      const rest = items.slice(1);
-      const now = Date.now();
-      return `
-        <div class="news-section" style="--section-color:${def.color};--section-bg:${def.bg};">
-          <div class="news-section-header">
-            <span class="news-section-icon"><svg viewBox="0 0 24 24">${def.icon}</svg></span>
-            <span class="news-section-name">${esc(def.name)}</span>
-            <span class="news-section-count">共 ${items.length} 条</span>
-          </div>
-          ${hero ? `<a href="${esc(hero.url||'#')}" target="_blank" class="news-hero">
-            <div class="news-hero-title">${esc(hero.title)}</div>
-            ${hero.summary ? `<div class="news-hero-desc">${esc(hero.summary)}</div>` : ''}
-            <div class="news-hero-meta">
-              <span>${esc(hero.source || '界面新闻')}</span>
-              <span>·</span>
-              <span class="news-time ${relFresh(hero.crawled_at, now)}">${relTime(hero.crawled_at, now)}</span>
-              <span class="read-more">阅读全文 →</span>
-            </div>
-          </a>` : ''}
-          <div class="news-list">
-            ${rest.map((n,i) => `<a href="${esc(n.url||'#')}" target="_blank" class="news-list-item">
-              <span class="news-list-num">${String(i+1).padStart(2,'0')}</span>
-              <div class="news-list-body">
-                <div class="news-list-title">${esc(n.title)}</div>
-                <div class="news-list-meta">
-                  <span>${esc(n.source || '界面新闻')}</span>
-                  <span>·</span>
-                  <span class="news-time ${relFresh(n.crawled_at, now)}">${relTime(n.crawled_at, now)}</span>
-                </div>
-              </div>
-            </a>`).join('')}
-          </div>
-        </div>
-      `;
-    };
-
+    const hero = items[0];
+    const rest = items.slice(1);
+    const now = Date.now();
     c.innerHTML = `
-      <div class="news-mag">
-        <!-- 左侧板块导航 -->
-        <aside class="news-mag__nav">
-          ${available.map((d,i) => {
-            const short = {'今日热点':'热点','公司头条':'头条','财经速览':'财经','时事追踪':'时事'}[d.name]||d.name;
-            return `
-            <button class="news-mag__item ${i===0?'active':''}" data-sec="${escAttr(d.name)}" style="--sec-color:${d.color};">
-              <span class="news-mag__icon"><svg viewBox="0 0 24 24">${d.icon}</svg></span>
-              <span class="news-mag__name">${esc(d.name)}</span>
-              <span class="news-mag__short">${esc(short)}</span>
-              <span class="news-mag__count">${sections[d.name].length}</span>
-            </button>`;
-          }).join('')}
-        </aside>
-        <!-- 右侧内容区 -->
-        <main class="news-mag__content" id="news-section-body">
-          ${renderSection(activeSection)}
-        </main>
+      <div class="news-brief">
+        <div class="news-section-header">
+          <span class="news-section-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+          <span class="news-section-name">新闻简报</span>
+          <span class="news-section-count">共 ${items.length} 条 · 每日更新</span>
+        </div>
+        <a href="${esc(hero.url || '#')}" target="_blank" class="news-hero">
+          <div class="news-hero-title">${esc(hero.title)}</div>
+          ${hero.summary ? `<div class="news-hero-desc">${esc(hero.summary)}</div>` : ''}
+          <div class="news-hero-meta">
+            <span class="news-source-badge">${esc(hero.source || '新闻')}</span>
+            <span>·</span>
+            <span class="news-time ${relFresh(hero.crawled_at, now)}">${relTime(hero.crawled_at, now)}</span>
+            <span class="read-more">阅读全文 →</span>
+          </div>
+        </a>
+        <div class="news-list">
+          ${rest.map((n, i) => `<a href="${esc(n.url || '#')}" target="_blank" class="news-list-item">
+            <span class="news-list-num">${String(i + 1).padStart(2, '0')}</span>
+            <div class="news-list-body">
+              <div class="news-list-title">${esc(n.title)}</div>
+              <div class="news-list-meta">
+                <span class="news-source-badge">${esc(n.source || '新闻')}</span>
+                <span>·</span>
+                <span class="news-time ${relFresh(n.crawled_at, now)}">${relTime(n.crawled_at, now)}</span>
+              </div>
+            </div>
+          </a>`).join('')}
+        </div>
       </div>
     `;
-
-    // 板块切换
-    c.querySelectorAll('.news-mag__item').forEach(btn => {
-      btn.addEventListener('click', () => {
-        c.querySelectorAll('.news-mag__item').forEach(t => t.classList.remove('active'));
-        btn.classList.add('active');
-        const body = $('news-section-body');
-        body.style.opacity = '0';
-        setTimeout(() => {
-          body.innerHTML = renderSection(btn.dataset.sec);
-          body.style.opacity = '1';
-          body.scrollTop = 0;
-          // 手机端：让整个新闻模块容器也滚回顶部
-          const mag = body.closest('.news-mag');
-          if (mag) { mag.scrollIntoView({ block: 'start' }); }
-        }, 120);
-      });
-    });
-
   } else if (tab === 'daily') {
     // 每日一读合一页：学习强国每日一读 + 诗经 + 名句 + 评论
     const si = _cycleIdx((data.shijing || []).length);

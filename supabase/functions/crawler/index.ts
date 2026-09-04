@@ -8,7 +8,7 @@
 // PAT 过期 / GitHub 拒收等故障从此与本链路无关。
 //
 // 移植自 crawlers/crawler.py（v3），逻辑逐条对齐：
-//   新闻   → 界面新闻四板块
+//   新闻   → RSS 聚合（中新网·时政滚动 为主，少数派·数字生活 点缀）
 //   诗经   → 古文岛
 //   名句   → 古诗文网
 //   评论   → 人民日报电子版当日第5版
@@ -285,66 +285,72 @@ function squash(s: string): string {
 }
 
 // ============================================================
-// 新闻 — 界面新闻四板块
+// 新闻 — RSS 聚合（中新网·时政滚动 为主，少数派·数字生活 点缀）
+// 注：人民网/新华网官方 RSS 均已冻结（人民网停在 2016/2025、新华网无日期停在 2022），
+//     故主源改用中新网滚动新闻（每日实时更新，已验证）。少数派作数码生活点缀。
 // ============================================================
-const NEWS_SECTIONS: Record<string, string> = {
-  今日热点: "https://www.jiemian.com/lists/1324kb.html",
-  公司头条: "https://www.jiemian.com/lists/1322kb.html",
-  财经速览: "https://www.jiemian.com/lists/1326kb.html",
-  时事追踪: "https://www.jiemian.com/lists/1325kb.html",
-};
+const NEWS_FEEDS: { name: string; url: string; max: number }[] = [
+  { name: "中新网", url: "https://www.chinanews.com.cn/rss/scroll-news.xml", max: 30 },
+  { name: "少数派", url: "https://sspai.com/feed", max: 8 },
+];
 
-function parseJiemian(html: string, category: string, dateStr: string, maxItems = 8) {
-  const doc = parse(html);
-  const items: Record<string, unknown>[] = [];
-  const seen = new Set<string>();
-  for (const li of qsa(doc, ".columns-right-center__newsflash-item")) {
-    const a = qs(li, 'a[href*="/article/"]');
-    if (!a) continue;
-    let href = a.getAttribute("href") || "";
-    if (!href) continue;
-    if (!href.startsWith("http")) {
-      href = href.startsWith("/") ? `https://www.jiemian.com${href}` : `https://www.jiemian.com/${href}`;
-    }
-    if (seen.has(href)) continue;
+/** 解码 HTML 实体 + 剥离标签（RSS description 常含 HTML/CDATA） */
+function decodeNewsText(s: string): string {
+  return s
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(parseInt(n, 10)))
+    .replace(/&amp;/g, "&")
+    .replace(/<[^>]+>/g, "")
+    .replace(/ /g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-    let title = squash(oneText(qs(li, "h4 a")));
-    if (!title || title.length < 6) title = squash(oneText(a));
-    if (!title || title.length < 6) continue;
+function rssTag(block: string, tag: string): string {
+  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "i");
+  const m = re.exec(block);
+  return m ? m[1] : "";
+}
 
-    let summary = "";
-    for (const sn of qsa(li, ".columns-right-center__newsflash-content__summary")) {
-      const t = squash(oneText(sn));
-      if (t && t !== title) {
-        summary = t;
-        break;
-      }
-    }
-
-    seen.add(href);
-    items.push({
+function parseRss(xml: string, source: string, dateStr: string, max: number): Record<string, unknown>[] {
+  const out: Record<string, unknown>[] = [];
+  const itemRe = /<item[\s>]([\s\S]*?)<\/item>/gi;
+  let m: RegExpExecArray | null;
+  let i = 0;
+  while ((m = itemRe.exec(xml)) !== null && i < max) {
+    const block = m[1];
+    const title = decodeNewsText(rssTag(block, "title"));
+    let link = rssTag(block, "link").trim();
+    if (!link) link = rssTag(block, "guid").trim();
+    const desc = decodeNewsText(rssTag(block, "description"));
+    if (!title || !link) continue;
+    out.push({
       title: title.slice(0, 80),
-      url: href,
-      summary: summary.slice(0, 120),
-      source: "界面新闻",
+      url: link,
+      summary: desc.slice(0, 200),
+      source,
       date: dateStr,
-      category,
+      category: source,
     });
-    if (items.length >= maxItems) break;
+    i++;
   }
-  return items;
+  return out;
 }
 
 async function fetchNews(dateStr: string) {
-  say("[新闻] 抓取界面新闻四板块...");
+  say("[新闻] 抓取 RSS 聚合（中新网为主 + 少数派点缀）...");
   const all: Record<string, unknown>[] = [];
-  const pages = await mapLimit(Object.entries(NEWS_SECTIONS), 4, async ([cat, url]) => {
-    const html = await httpText(url, { timeout: 25_000 });
-    const items = html ? parseJiemian(html, cat, dateStr) : [];
-    say(`  · ${cat}: ${items.length} 条`);
+  const feeds = await mapLimit(NEWS_FEEDS, 2, async (f) => {
+    const xml = await httpText(f.url, { timeout: 25_000 });
+    const items = xml ? parseRss(xml, f.name, dateStr, f.max) : [];
+    say(`  · ${f.name}: ${items.length} 条`);
     return items;
   });
-  for (const p of pages) if (p) all.push(...p);
+  for (const p of feeds) if (p) all.push(...p);
 
   if (!all.length) {
     say("  ! 无新闻数据");
@@ -352,7 +358,7 @@ async function fetchNews(dateStr: string) {
   }
   const cutoff = bjDateMinus(7);
   const have = await existingSet("news", "url", `&date=gte.${cutoff}`, 1000);
-  const fresh = all.filter((i) => !have.has(String(i.url)));
+  const fresh = all.filter((it) => !have.has(String(it.url)));
   const n = await sbPost("news", fresh);
   await sbDelete(`news?date=lt.${cutoff}`); // 清理 7 天前旧新闻
   return n;
