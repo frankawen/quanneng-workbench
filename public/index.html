@@ -793,7 +793,7 @@ canvas { width: 100% !important; height: 100% !important; }
       <section class="module" id="mod-read">
         <div class="mhead">
           <h1>每日一读</h1>
-          <p>学习强国 · 每日一读，与人民日报 05 版评论，每天清晨同步。</p>
+          <p>学习强国 · 每日一读，点链接前往官方阅读，平台不再自动采集。</p>
         </div>
         <div class="chips" id="read-tabs">
           <button class="chip active" data-tab="news">新闻</button>
@@ -1045,7 +1045,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-09-02b';
+const BUILD_VERSION = '2026-09-04a';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -2245,16 +2245,14 @@ function relFresh(ts, now) {
 
 async function loadDailyRead(tab = 'news') {
   try {
-    const [news, shijing, quotes, comments, dailyRead] = await Promise.all([
+    const [news, shijing, quotes, comments] = await Promise.all([
       sbQuery('news', { order: 'crawled_at desc', limit: 50 }),
       sbQuery('shijing', { order: 'title asc', limit: 100 }),
       sbQuery('quotes', { order: 'crawled_at desc', limit: 100 }),
-      sbQuery('comments', { order: 'crawled_at desc', limit: 20 }),
-      // daily_read 表可能未建，失败不影响其余模块
-      sbQuery('daily_read', { order: 'date desc', limit: 7 }).catch(() => [])
+      sbQuery('comments', { order: 'crawled_at desc', limit: 20 })
     ]);
 
-    renderReadContent(tab, { news, shijing, quotes, comments, dailyRead });
+    renderReadContent(tab, { news, shijing, quotes, comments });
   } catch(e) {
     console.error('Read error:', e);
     showBanner('每日一读加载失败');
@@ -2377,20 +2375,19 @@ function renderReadContent(tab, data) {
     const poem = (data.shijing || [])[si];
     const quote = (data.quotes || [])[qi];
     const comments = data.comments || [];
-    const dr = (data.dailyRead || [])[0];
 
     c.innerHTML = `
 
-      <!-- 学习强国 · 每日一读（公众号文章，标题+简介+跳转链接） -->
-      ${dr ? `<div class="daily-section fade-in" style="border-left:4px solid #C4704B;">
+      <!-- 学习强国 · 每日一读（跳转链接，不再爬取） -->
+      <div class="daily-section fade-in" style="border-left:4px solid #C4704B;">
         <div class="daily-section-header">
           <span class="daily-label" style="background:#C4704B;color:#fff;">强国·每日一读</span>
-          <span class="daily-subtitle">学习强国 · ${esc(dr.date || '')}</span>
+          <span class="daily-subtitle">学习强国 · 点链接前往阅读</span>
         </div>
-        <div class="daily-body-text" style="font-weight:600;font-size:15px;line-height:1.5;">${esc(dr.title)}</div>
-        ${dr.summary ? `<div class="daily-body-text" style="margin-top:6px;color:#666;font-size:13px;line-height:1.6;">${esc(dr.summary)}</div>` : ''}
-        <div class="daily-footer"><a href="${esc(dr.url || '#')}" target="_blank" rel="noopener">阅读全文 ↗</a></div>
-      </div>` : emptyState('book', '今日每日一读待采集', '学习强国「每日一读」将在清晨同步，稍后再来看看')}
+        <div class="daily-body-text" style="font-weight:600;font-size:15px;line-height:1.5;">前往学习强国「每日一读」专栏</div>
+        <div class="daily-body-text" style="margin-top:6px;color:#666;font-size:13px;line-height:1.6;">内容由学习强国官方维护，平台不再自动采集，点击直接跳转官方阅读。</div>
+        <div class="daily-footer"><a href="https://article.xuexi.cn/news/index.html#/special-topic/5427951075763236" target="_blank" rel="noopener">前往学习强国阅读 ↗</a></div>
+      </div>
 
       <!-- 诗经 -->
       ${poem ? `<div class="daily-section fade-in">
