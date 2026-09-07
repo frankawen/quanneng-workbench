@@ -1154,7 +1154,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-09-07a';
+const BUILD_VERSION = '2026-09-07b';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -2391,6 +2391,9 @@ async function loadDailyRead(tab = 'news') {
     ]);
     // 每 5 条主源插 1 条点缀，保证少数派在首屏可见
     const news = interleaveNews(mainNews, garnishNews, 5);
+    // 派早报置顶：少数派每天早上的「派早报」是一日要闻精选，提到头条位（hero）
+    const zaobaoIdx = news.findIndex(n => n.source === '少数派' && (n.title || '').startsWith('派早报'));
+    if (zaobaoIdx > 0) news.unshift(news.splice(zaobaoIdx, 1)[0]);
 
     renderReadContent(tab, { news, shijing, quotes, comments });
   } catch(e) {

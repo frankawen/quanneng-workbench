@@ -287,12 +287,47 @@ function squash(s: string): string {
 // ============================================================
 // 新闻 — RSS 聚合（中新网·时政滚动 为主，少数派·数字生活 点缀）
 // 注：人民网/新华网官方 RSS 均已冻结（人民网停在 2016/2025、新华网无日期停在 2022），
-//     故主源改用中新网滚动新闻（每日实时更新，已验证）。少数派作数码生活点缀。
+//     故主源改用中新网滚动新闻（每日实时更新，已验证）。
+// 少数派数据入口说明（2026-09-07）：sspai.com/feed RSS 更新严重滞后
+//     （网页已发当天派早报，RSS 还停在 1~2 天前；官方 API v1 全部 400），
+//     故少数派改爬首页 HTML（SSR 渲染，当天内容即时可见）。
 // ============================================================
-const NEWS_FEEDS: { name: string; url: string; max: number }[] = [
-  { name: "中新网", url: "https://www.chinanews.com.cn/rss/scroll-news.xml", max: 30 },
-  { name: "少数派", url: "https://sspai.com/feed", max: 8 },
+const NEWS_FEEDS: { name: string; url: string; max: number; type: "rss" | "sspai_home" }[] = [
+  { name: "中新网", url: "https://www.chinanews.com.cn/rss/scroll-news.xml", max: 30, type: "rss" },
+  { name: "少数派", url: "https://sspai.com/", max: 8, type: "sspai_home" },
 ];
+
+/** 解析少数派首页 SSR HTML，提取文章卡片（标题 + 链接 + 摘要） */
+function parseSspaiHome(html: string, source: string, dateStr: string, maxItems: number): Record<string, unknown>[] {
+  const doc = parse(html);
+  const items: Record<string, unknown>[] = [];
+  const seen = new Set<string>();
+  for (const a of qsa(doc, 'a[href*="/post/"]')) {
+    let href = (a.getAttribute("href") || "").trim();
+    if (!href) continue;
+    if (!href.startsWith("http")) href = `https://sspai.com${href}`;
+    // 归一化后去重
+    const m = href.match(/\/post\/(\d+)/);
+    if (!m) continue;
+    const url = `https://sspai.com/post/${m[1]}`;
+    if (seen.has(url)) continue;
+    // 标题：普通卡片在 p.article__card__title；「派早报」横幅卡在 .morning__paper__board__card__desc
+    const title = squash(oneText(qs(a, ".article__card__title"))) || squash(oneText(qs(a, ".morning__paper__board__card__desc")));
+    if (!title || title.length < 6) continue;
+    const summary = squash(oneText(qs(a, ".article__card__summary")));
+    seen.add(url);
+    items.push({
+      title: title.slice(0, 80),
+      url,
+      summary: summary.slice(0, 200),
+      source,
+      date: dateStr,
+      category: source,
+    });
+    if (items.length >= maxItems) break;
+  }
+  return items;
+}
 
 /** 解码 HTML 实体 + 剥离标签（RSS description 常含 HTML/CDATA） */
 function decodeNewsText(s: string): string {
@@ -341,16 +376,37 @@ function parseRss(xml: string, source: string, dateStr: string, max: number): Re
   return out;
 }
 
-async function fetchNews(dateStr: string) {
-  say("[新闻] 抓取 RSS 聚合（中新网为主 + 少数派点缀）...");
+// 新闻源英文标识 → RSS feed name（供 ?feeds= 参数使用，避免 URL 里传中文）
+const FEED_ALIASES: Record<string, string> = {
+  chinanews: "中新网",
+  sspai: "少数派",
+};
+
+async function fetchNews(dateStr: string, onlySource?: string) {
+  say(`[新闻] 抓取 RSS 聚合（中新网为主 + 少数派点缀）${onlySource ? `，仅抓 ${onlySource}` : ""}...`);
+  let feeds = NEWS_FEEDS;
+  if (onlySource) {
+    feeds = NEWS_FEEDS.filter((f) => f.name === onlySource);
+    if (!feeds.length) {
+      say(`  ! 未知新闻源标识: ${onlySource}（可用: chinanews / sspai）`);
+      return 0;
+    }
+  }
   const all: Record<string, unknown>[] = [];
-  const feeds = await mapLimit(NEWS_FEEDS, 2, async (f) => {
-    const xml = await httpText(f.url, { timeout: 25_000 });
-    const items = xml ? parseRss(xml, f.name, dateStr, f.max) : [];
+  const results = await mapLimit(feeds, 2, async (f) => {
+    let items: Record<string, unknown>[] = [];
+    if (f.type === "sspai_home") {
+      // 少数派：首页 SSR HTML（RSS 滞后 1~2 天，弃用）
+      const html = await httpText(f.url, { timeout: 25_000 });
+      items = html ? parseSspaiHome(html, f.name, dateStr, f.max) : [];
+    } else {
+      const xml = await httpText(f.url, { timeout: 25_000 });
+      items = xml ? parseRss(xml, f.name, dateStr, f.max) : [];
+    }
     say(`  · ${f.name}: ${items.length} 条`);
     return items;
   });
-  for (const p of feeds) if (p) all.push(...p);
+  for (const p of results) if (p) all.push(...p);
 
   if (!all.length) {
     say("  ! 无新闻数据");
@@ -638,18 +694,21 @@ async function fetchDailyRead(dateStr: string) {
 // ============================================================
 // 抓取主体（可从 handler 同步 await，也可交给 waitUntil 后台跑）
 // ============================================================
-async function runCrawl(force: boolean) {
+async function runCrawl(force: boolean, onlyFeed?: string) {
   log.length = 0;
   const bj = bjParts();
   say(
-    `[${bj.date} ${String(bj.hour).padStart(2, "0")}:${String(bj.minute).padStart(2, "0")}] 开始爬取（北京时间 ${bj.hour} 点档）`
+    `[${bj.date} ${String(bj.hour).padStart(2, "0")}:${String(bj.minute).padStart(2, "0")}] 开始爬取（北京时间 ${bj.hour} 点档）${onlyFeed ? `，指定源: ${onlyFeed}` : ""}`
   );
 
   const res: Record<string, number> = {};
   const t0 = Date.now();
 
   try {
-    if (force || ![5, 6, 12, 17].includes(bj.hour)) {
+    if (onlyFeed) {
+      // 指定单源抓取（如 8:30 档单独补抓少数派，抢当天的派早报）
+      res.news = await fetchNews(bj.date, onlyFeed);
+    } else if (force || ![5, 6, 12, 17].includes(bj.hour)) {
       // 全量补抓（手动 / 延迟补跑）
       res.news = await fetchNews(bj.date);
       res.shijing = await fetchShijing();
@@ -711,12 +770,18 @@ Deno.serve(async (req: Request) => {
 
   const force = url.searchParams.get("all") === "1";
   const sync = url.searchParams.get("sync") === "1";
-
-  if (sync || typeof EdgeRuntime === "undefined") {
-    return json(await runCrawl(force));
+  // ?feeds=sspai / chinanews：只抓指定新闻源（供 8:30 档单独补抓少数派等场景）
+  const feedAlias = url.searchParams.get("feeds") || "";
+  const onlyFeed = feedAlias ? FEED_ALIASES[feedAlias] : undefined;
+  if (feedAlias && !onlyFeed) {
+    return json({ ok: false, error: `unknown feeds param: ${feedAlias} (可用: chinanews / sspai)` }, 400);
   }
 
-  EdgeRuntime.waitUntil(runCrawl(force));
+  if (sync || typeof EdgeRuntime === "undefined") {
+    return json(await runCrawl(force, onlyFeed));
+  }
+
+  EdgeRuntime.waitUntil(runCrawl(force, onlyFeed));
   const bj = bjParts();
   return json({
     ok: true,
