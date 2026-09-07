@@ -1154,7 +1154,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-09-04d';
+const BUILD_VERSION = '2026-09-07a';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -2379,12 +2379,18 @@ function relFresh(ts, now) {
 
 async function loadDailyRead(tab = 'news') {
   try {
-    const [news, shijing, quotes, comments] = await Promise.all([
-      sbQuery('news', { order: 'crawled_at desc', limit: 50 }),
+    // 新闻按来源「配额」分开查询，而非统一 limit 取前 N 条：
+    // 中新网 30 条/天，若统一 limit 50，两天就会把更新更慢的少数派完全挤出可见范围。
+    const [mainNews, garnishNews, shijing, quotes, comments] = await Promise.all([
+      sbQuery('news', { filter: { property: 'source', operator: 'eq', value: '中新网' }, order: 'crawled_at desc', limit: 40 }),
+      // 点缀源查询失败不应影响主源展示
+      sbQuery('news', { filter: { property: 'source', operator: 'eq', value: '少数派' }, order: 'crawled_at desc', limit: 8 }).catch(() => []),
       sbQuery('shijing', { order: 'title asc', limit: 100 }),
       sbQuery('quotes', { order: 'crawled_at desc', limit: 100 }),
       sbQuery('comments', { order: 'crawled_at desc', limit: 20 })
     ]);
+    // 每 5 条主源插 1 条点缀，保证少数派在首屏可见
+    const news = interleaveNews(mainNews, garnishNews, 5);
 
     renderReadContent(tab, { news, shijing, quotes, comments });
   } catch(e) {
@@ -2393,12 +2399,39 @@ async function loadDailyRead(tab = 'news') {
   }
 }
 
+/**
+ * 把点缀源按固定间隔交错插入主源信息流，保证点缀源在首屏可见。
+ *
+ * 背景：主源（中新网）30 条/天、更新快；点缀源（少数派）RSS 只留最新 10 条且数天才更新一次。
+ * 若合并后统一按 crawled_at 倒序取前 N 条，点缀源因时间更老会被整体挤出列表
+ * （实测：统一 limit 50 时前 50 条里少数派占 0 条）。故改用「位置配额」交错。
+ *
+ * @param {Array<Object>} main 主源条目（已按 crawled_at 倒序）
+ * @param {Array<Object>} garnish 点缀源条目（已按 crawled_at 倒序）
+ * @param {number} every 每隔几条主源插入 1 条点缀
+ * @returns {Array<Object>} 交错后的条目数组
+ */
+function interleaveNews(main, garnish, every = 5) {
+  const out = [];
+  const g = Array.isArray(garnish) ? garnish : [];
+  let gi = 0;
+  (Array.isArray(main) ? main : []).forEach((item, i) => {
+    out.push(item);
+    if ((i + 1) % every === 0 && gi < g.length) out.push(g[gi++]);
+  });
+  // 主源不足（或点缀有余）时把剩余点缀补在末尾，避免点缀永远不显示
+  while (gi < g.length) out.push(g[gi++]);
+  return out;
+}
+
 function renderReadContent(tab, data) {
   const c = $('read-content');
 
   if (tab === 'news') {
     // 新闻简报：单一信息流（中新网为主 + 少数派点缀），去掉板块切换
-    const items = (data.news || []).slice().sort((a, b) => (b.crawled_at || '').localeCompare(a.crawled_at || ''));
+    // 注意：顺序由 loadDailyRead 的 interleaveNews 决定（主源倒序 + 点缀固定间隔插入），
+    // 此处绝不能再按 crawled_at 重排，否则点缀源会被挤回列表末尾、首屏不可见。
+    const items = data.news || [];
     if (!items.length) {
       c.innerHTML = emptyState('newspaper', '暂无新闻', '新闻数据正在路上，请稍后刷新');
       return;
