@@ -1154,7 +1154,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-09-07c';
+const BUILD_VERSION = '2026-09-07d';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -2380,19 +2380,19 @@ function relFresh(ts, now) {
 async function loadDailyRead(tab = 'news') {
   try {
     // 新闻按来源「配额」分开查询，而非统一 limit 取前 N 条：
-    // 中新网 30 条/天，若统一 limit 50，两天就会把更新更慢的少数派完全挤出可见范围。
-    const [mainNews, garnishSspai, garnishCn, shijing, quotes, comments] = await Promise.all([
-      // 主源：ZAKER（myzaker.com 综合聚合）
-      sbQuery('news', { filter: { property: 'source', operator: 'eq', value: 'ZAKER' }, order: 'crawled_at desc', limit: 40 }),
-      // 点缀源：少数派（更新少、优先消耗、派早报置顶）+ 中新网（殿后）
+    // 中新网 30 条/天为主源，ZAKER~7条+少数派~8条为点缀（更新慢，必须配额保证可见）
+    const [mainNews, garnishSspai, garnishZaker, shijing, quotes, comments] = await Promise.all([
+      // 主源：中新网 RSS 滚动新闻（每日 ~30 条，稳定可靠）
+      sbQuery('news', { filter: { property: 'source', operator: 'eq', value: '中新网' }, order: 'crawled_at desc', limit: 40 }),
+      // 点缀：少数派（更新少、优先消耗、派早报置顶）+ ZAKER（title 去重后 ~7 条/天）
       sbQuery('news', { filter: { property: 'source', operator: 'eq', value: '少数派' }, order: 'crawled_at desc', limit: 8 }).catch(() => []),
-      sbQuery('news', { filter: { property: 'source', operator: 'eq', value: '中新网' }, order: 'crawled_at desc', limit: 20 }).catch(() => []),
+      sbQuery('news', { filter: { property: 'source', operator: 'eq', value: 'ZAKER' }, order: 'crawled_at desc', limit: 10 }).catch(() => []),
       sbQuery('shijing', { order: 'title asc', limit: 100 }),
       sbQuery('quotes', { order: 'crawled_at desc', limit: 100 }),
       sbQuery('comments', { order: 'crawled_at desc', limit: 20 })
     ]);
-    // 点缀池：少数派在前（提前），中新网在后（殿后）；两者可连续成组
-    const garnishNews = [...(garnishSspai || []), ...(garnishCn || [])];
+    // 点缀池：少数派在前（提前），ZAKER 在后（殿后）；两者可连续成组
+    const garnishNews = [...(garnishSspai || []), ...(garnishZaker || [])];
     // 每 3 条主源插 1~2 条点缀（perGroup=2）
     const news = interleaveNews(mainNews, garnishNews, 3, 2);
     // 派早报置顶：少数派每天早上的「派早报」是一日要闻精选，提到头条位（hero）
@@ -2439,7 +2439,7 @@ function renderReadContent(tab, data) {
   const c = $('read-content');
 
   if (tab === 'news') {
-    // 新闻简报：单一信息流（中新网为主 + 少数派点缀），去掉板块切换
+    // 新闻简报：单一信息流（中新网为主 + ZAKER/少数派点缀），去掉板块切换
     // 注意：顺序由 loadDailyRead 的 interleaveNews 决定（主源倒序 + 点缀固定间隔插入），
     // 此处绝不能再按 crawled_at 重排，否则点缀源会被挤回列表末尾、首屏不可见。
     const items = data.news || [];
