@@ -1154,7 +1154,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-09-07d';
+const BUILD_VERSION = '2026-09-07e';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -1204,10 +1204,11 @@ async function sbQuery(table, opts = {}) {
         // UUID 类型的值不加引号（PostgREST 会报语法错误）
         qs.push(`${f.property}.${f.operator}.${f.value}`);
       } else {
-        // 字符串值：直接 URL 编码即可，切勿用 JSON.stringify 包双引号。
-        // 实测本项目的 PostgREST 版本下，"xxx" 形式一律命中 0 条（中文/英文/含逗号/含引号均如此），
-        // 直接编码则全部正确命中。若将来用到 in 操作符传数组，需另做处理。
-        qs.push(`${f.property}.${f.operator}.${encodeURIComponent(String(f.value))}`);
+        // 字符串值：用等号分隔（column=operator.value），切勿用点号。
+        // ⚠️ PostgREST 点号格式 (col.op.val) 在当前 Supabase 版本下对字符串过滤完全失效，
+        //    返回未过滤的全表前N条（2026-09-07 实测：source.eq.少数派 返回界面新闻记录）。
+        //    必须用等号格式 (col=op.val) 才能正确命中中文/英文 source 值。
+        qs.push(`${f.property}=${f.operator}.${encodeURIComponent(String(f.value))}`);
       }
     }
   }
