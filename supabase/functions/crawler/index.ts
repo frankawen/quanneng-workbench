@@ -285,20 +285,18 @@ function squash(s: string): string {
 }
 
 // ============================================================
-// 新闻 — 多源聚合（ZAKER·myzaker 首页 为主源，中新网·时政滚动 + 少数派·数字生活 为点缀）
-// 主源 ZAKER（2026-09-07）：myzaker.com 首页 SSR，综合门户聚合，每日实时更新；
-//     首页仅含标题/来源/时间，无正文摘要（原文走 l.php 跳转中间页），故摘要栏回填原始来源名。
+// 新闻 — 多源聚合（中新网·时政滚动 为主源，ZAKER·myzaker + 少数派·数字生活 为点缀）
+// 主源中新网（2026-09-07c→d 回归）：chinanews.com.cn RSS 滚动新闻，每日 ~30 条，稳定可靠。
 // 点缀说明：
-//   · 中新网 RSS 滚动新闻（每日实时）— 殿后点缀；
-//   · 少数派 sspai.com/feed RSS 更新严重滞后（网页已发派早报、RSS 停在 1~2 天前，API v1 全 400），
-//     故少数派改爬首页 HTML（SSR），并保留「派早报」置顶逻辑。
+//   · ZAKER myzaker.com 首页 SSR（~7 条/天静态可爬，同文多链须按 title 去重）；
+//   · 少数派 sspai.com 首页 SSR（RSS 滞后 1~2 天，保留「派早报」置顶逻辑）。
 // 人民网/新华网官方 RSS 均已冻结（人民网停在 2016/2025、新华网无日期停在 2022），不可用。
 // ============================================================
 const NEWS_FEEDS: { name: string; url: string; max: number; type: "rss" | "sspai_home" | "zaker_home" }[] = [
-  // 主源：ZAKER 综合门户聚合
-  { name: "ZAKER", url: "https://www.myzaker.com/", max: 40, type: "zaker_home" },
-  // 点缀：中新网（RSS 滚动）+ 少数派（首页 SSR，派早报置顶）
+  // 主源：中新网滚动新闻
   { name: "中新网", url: "https://www.chinanews.com.cn/rss/scroll-news.xml", max: 30, type: "rss" },
+  // 点缀：ZAKER 综合门户 + 少数派数字生活
+  { name: "ZAKER", url: "https://www.myzaker.com/", max: 10, type: "zaker_home" },
   { name: "少数派", url: "https://sspai.com/", max: 8, type: "sspai_home" },
 ];
 
@@ -348,12 +346,14 @@ function parseZakerHome(html: string, source: string, dateStr: string, maxItems:
     if (!href.startsWith("http")) continue; // 跳过站内相对链接（频道/标签等）
     const title = squash(oneText(t));
     if (!title || title.length < 6) continue;
-    // 原始媒体来源（人民日报/新华社等）回填到 summary，作为内容补充；首页无正文摘要
+    // ⚠️ 必须按 title 去重：myzaker 同一文章有多个 href 格式（l.php 跳转 vs /article/ 直链），
+    //    仅靠 href 去重会导致同文不同链重复入库
+    if (seen.has(title)) continue;
+    seen.add(title);
+    // 原始媒体来源（人民日报/新华社等）回填到 summary；首页无正文摘要
     const aitem = a.parentElement;
     const fromEl = aitem ? qs(aitem, ".article-from") : null;
     const from = fromEl ? squash(oneText(fromEl)) : "";
-    if (seen.has(href)) continue;
-    seen.add(href);
     items.push({
       title: title.slice(0, 80),
       url: href,
@@ -422,12 +422,12 @@ const FEED_ALIASES: Record<string, string> = {
 };
 
 async function fetchNews(dateStr: string, onlySource?: string) {
-  say(`[新闻] 抓取多源聚合（ZAKER 为主 + 中新网/少数派点缀）${onlySource ? `，仅抓 ${onlySource}` : ""}...`);
+  say(`[新闻] 抓取多源聚合（中新网为主 + ZAKER/少数派点缀）${onlySource ? `，仅抓 ${onlySource}` : ""}...`);
   let feeds = NEWS_FEEDS;
   if (onlySource) {
     feeds = NEWS_FEEDS.filter((f) => f.name === onlySource);
     if (!feeds.length) {
-      say(`  ! 未知新闻源标识: ${onlySource}（可用: zaker / chinanews / sspai）`);
+      say(`  ! 未知新闻源标识: ${onlySource}（可用: chinanews / zaker / sspai）`);
       return 0;
     }
   }
