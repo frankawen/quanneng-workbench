@@ -285,14 +285,19 @@ function squash(s: string): string {
 }
 
 // ============================================================
-// 新闻 — RSS 聚合（中新网·时政滚动 为主，少数派·数字生活 点缀）
-// 注：人民网/新华网官方 RSS 均已冻结（人民网停在 2016/2025、新华网无日期停在 2022），
-//     故主源改用中新网滚动新闻（每日实时更新，已验证）。
-// 少数派数据入口说明（2026-09-07）：sspai.com/feed RSS 更新严重滞后
-//     （网页已发当天派早报，RSS 还停在 1~2 天前；官方 API v1 全部 400），
-//     故少数派改爬首页 HTML（SSR 渲染，当天内容即时可见）。
+// 新闻 — 多源聚合（ZAKER·myzaker 首页 为主源，中新网·时政滚动 + 少数派·数字生活 为点缀）
+// 主源 ZAKER（2026-09-07）：myzaker.com 首页 SSR，综合门户聚合，每日实时更新；
+//     首页仅含标题/来源/时间，无正文摘要（原文走 l.php 跳转中间页），故摘要栏回填原始来源名。
+// 点缀说明：
+//   · 中新网 RSS 滚动新闻（每日实时）— 殿后点缀；
+//   · 少数派 sspai.com/feed RSS 更新严重滞后（网页已发派早报、RSS 停在 1~2 天前，API v1 全 400），
+//     故少数派改爬首页 HTML（SSR），并保留「派早报」置顶逻辑。
+// 人民网/新华网官方 RSS 均已冻结（人民网停在 2016/2025、新华网无日期停在 2022），不可用。
 // ============================================================
-const NEWS_FEEDS: { name: string; url: string; max: number; type: "rss" | "sspai_home" }[] = [
+const NEWS_FEEDS: { name: string; url: string; max: number; type: "rss" | "sspai_home" | "zaker_home" }[] = [
+  // 主源：ZAKER 综合门户聚合
+  { name: "ZAKER", url: "https://www.myzaker.com/", max: 40, type: "zaker_home" },
+  // 点缀：中新网（RSS 滚动）+ 少数派（首页 SSR，派早报置顶）
   { name: "中新网", url: "https://www.chinanews.com.cn/rss/scroll-news.xml", max: 30, type: "rss" },
   { name: "少数派", url: "https://sspai.com/", max: 8, type: "sspai_home" },
 ];
@@ -320,6 +325,39 @@ function parseSspaiHome(html: string, source: string, dateStr: string, maxItems:
       title: title.slice(0, 80),
       url,
       summary: summary.slice(0, 200),
+      source,
+      date: dateStr,
+      category: source,
+    });
+    if (items.length >= maxItems) break;
+  }
+  return items;
+}
+
+/** 解析 ZAKER(myzaker.com) 首页 SSR：遍历所有含 .article-title 的 <a>（标题/来源/时间，无正文摘要） */
+function parseZakerHome(html: string, source: string, dateStr: string, maxItems: number): Record<string, unknown>[] {
+  const doc = parse(html);
+  const items: Record<string, unknown>[] = [];
+  const seen = new Set<string>();
+  for (const a of qsa(doc, "a")) {
+    const t = qs(a, ".article-title");
+    if (!t) continue; // 仅保留真正含文章标题的链接（跳过导航/页脚等）
+    let href = (a.getAttribute("href") || "").trim();
+    if (!href || href.startsWith("#") || href.toLowerCase().startsWith("javascript:")) continue;
+    if (href.startsWith("//")) href = "https:" + href; // 协议相对 → https
+    if (!href.startsWith("http")) continue; // 跳过站内相对链接（频道/标签等）
+    const title = squash(oneText(t));
+    if (!title || title.length < 6) continue;
+    // 原始媒体来源（人民日报/新华社等）回填到 summary，作为内容补充；首页无正文摘要
+    const aitem = a.parentElement;
+    const fromEl = aitem ? qs(aitem, ".article-from") : null;
+    const from = fromEl ? squash(oneText(fromEl)) : "";
+    if (seen.has(href)) continue;
+    seen.add(href);
+    items.push({
+      title: title.slice(0, 80),
+      url: href,
+      summary: from ? `来源：${from}` : "",
       source,
       date: dateStr,
       category: source,
@@ -378,24 +416,29 @@ function parseRss(xml: string, source: string, dateStr: string, max: number): Re
 
 // 新闻源英文标识 → RSS feed name（供 ?feeds= 参数使用，避免 URL 里传中文）
 const FEED_ALIASES: Record<string, string> = {
+  zaker: "ZAKER",
   chinanews: "中新网",
   sspai: "少数派",
 };
 
 async function fetchNews(dateStr: string, onlySource?: string) {
-  say(`[新闻] 抓取 RSS 聚合（中新网为主 + 少数派点缀）${onlySource ? `，仅抓 ${onlySource}` : ""}...`);
+  say(`[新闻] 抓取多源聚合（ZAKER 为主 + 中新网/少数派点缀）${onlySource ? `，仅抓 ${onlySource}` : ""}...`);
   let feeds = NEWS_FEEDS;
   if (onlySource) {
     feeds = NEWS_FEEDS.filter((f) => f.name === onlySource);
     if (!feeds.length) {
-      say(`  ! 未知新闻源标识: ${onlySource}（可用: chinanews / sspai）`);
+      say(`  ! 未知新闻源标识: ${onlySource}（可用: zaker / chinanews / sspai）`);
       return 0;
     }
   }
   const all: Record<string, unknown>[] = [];
   const results = await mapLimit(feeds, 2, async (f) => {
     let items: Record<string, unknown>[] = [];
-    if (f.type === "sspai_home") {
+    if (f.type === "zaker_home") {
+      // 主源 ZAKER：首页 SSR HTML（综合门户聚合，标题/来源/时间，无正文摘要）
+      const html = await httpText(f.url, { timeout: 25_000, headers: { "User-Agent": UA } });
+      items = html ? parseZakerHome(html, f.name, dateStr, f.max) : [];
+    } else if (f.type === "sspai_home") {
       // 少数派：首页 SSR HTML（RSS 滞后 1~2 天，弃用）
       const html = await httpText(f.url, { timeout: 25_000 });
       items = html ? parseSspaiHome(html, f.name, dateStr, f.max) : [];

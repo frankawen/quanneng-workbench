@@ -1154,7 +1154,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-09-07b';
+const BUILD_VERSION = '2026-09-07c';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -2381,16 +2381,20 @@ async function loadDailyRead(tab = 'news') {
   try {
     // 新闻按来源「配额」分开查询，而非统一 limit 取前 N 条：
     // 中新网 30 条/天，若统一 limit 50，两天就会把更新更慢的少数派完全挤出可见范围。
-    const [mainNews, garnishNews, shijing, quotes, comments] = await Promise.all([
-      sbQuery('news', { filter: { property: 'source', operator: 'eq', value: '中新网' }, order: 'crawled_at desc', limit: 40 }),
-      // 点缀源查询失败不应影响主源展示
+    const [mainNews, garnishSspai, garnishCn, shijing, quotes, comments] = await Promise.all([
+      // 主源：ZAKER（myzaker.com 综合聚合）
+      sbQuery('news', { filter: { property: 'source', operator: 'eq', value: 'ZAKER' }, order: 'crawled_at desc', limit: 40 }),
+      // 点缀源：少数派（更新少、优先消耗、派早报置顶）+ 中新网（殿后）
       sbQuery('news', { filter: { property: 'source', operator: 'eq', value: '少数派' }, order: 'crawled_at desc', limit: 8 }).catch(() => []),
+      sbQuery('news', { filter: { property: 'source', operator: 'eq', value: '中新网' }, order: 'crawled_at desc', limit: 20 }).catch(() => []),
       sbQuery('shijing', { order: 'title asc', limit: 100 }),
       sbQuery('quotes', { order: 'crawled_at desc', limit: 100 }),
       sbQuery('comments', { order: 'crawled_at desc', limit: 20 })
     ]);
-    // 每 5 条主源插 1 条点缀，保证少数派在首屏可见
-    const news = interleaveNews(mainNews, garnishNews, 5);
+    // 点缀池：少数派在前（提前），中新网在后（殿后）；两者可连续成组
+    const garnishNews = [...(garnishSspai || []), ...(garnishCn || [])];
+    // 每 3 条主源插 1~2 条点缀（perGroup=2）
+    const news = interleaveNews(mainNews, garnishNews, 3, 2);
     // 派早报置顶：少数派每天早上的「派早报」是一日要闻精选，提到头条位（hero）
     const zaobaoIdx = news.findIndex(n => n.source === '少数派' && (n.title || '').startsWith('派早报'));
     if (zaobaoIdx > 0) news.unshift(news.splice(zaobaoIdx, 1)[0]);
@@ -2405,22 +2409,26 @@ async function loadDailyRead(tab = 'news') {
 /**
  * 把点缀源按固定间隔交错插入主源信息流，保证点缀源在首屏可见。
  *
- * 背景：主源（中新网）30 条/天、更新快；点缀源（少数派）RSS 只留最新 10 条且数天才更新一次。
- * 若合并后统一按 crawled_at 倒序取前 N 条，点缀源因时间更老会被整体挤出列表
- * （实测：统一 limit 50 时前 50 条里少数派占 0 条）。故改用「位置配额」交错。
+ * 背景：主源（ZAKER）每日实时更新、条目多；点缀源（少数派 更新少 / 中新网 高频）若合并后
+ * 统一按 crawled_at 倒序取前 N 条，更新慢的少数派会被整体挤出列表（实测旧版前 50 条占 0）。
+ * 故改用「位置配额」交错：每 every 条主源后连续插入 perGroup 条点缀。
  *
  * @param {Array<Object>} main 主源条目（已按 crawled_at 倒序）
- * @param {Array<Object>} garnish 点缀源条目（已按 crawled_at 倒序）
- * @param {number} every 每隔几条主源插入 1 条点缀
+ * @param {Array<Object>} garnish 点缀源条目（已按 crawled_at 倒序；调用方控制顺序：少数派在前、中新网在后）
+ * @param {number} every 每隔几条主源插入一组点缀（默认 3）
+ * @param {number} perGroup 每组插入几条点缀，可连续成组（默认 2，即每 3 主插 1~2 点缀）
  * @returns {Array<Object>} 交错后的条目数组
  */
-function interleaveNews(main, garnish, every = 5) {
+function interleaveNews(main, garnish, every = 3, perGroup = 2) {
   const out = [];
   const g = Array.isArray(garnish) ? garnish : [];
   let gi = 0;
   (Array.isArray(main) ? main : []).forEach((item, i) => {
     out.push(item);
-    if ((i + 1) % every === 0 && gi < g.length) out.push(g[gi++]);
+    // 每 every 条主源后，连续插入 perGroup 条点缀（点缀源可成组出现）
+    if ((i + 1) % every === 0) {
+      for (let k = 0; k < perGroup && gi < g.length; k++) out.push(g[gi++]);
+    }
   });
   // 主源不足（或点缀有余）时把剩余点缀补在末尾，避免点缀永远不显示
   while (gi < g.length) out.push(g[gi++]);
