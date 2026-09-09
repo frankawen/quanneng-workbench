@@ -208,6 +208,22 @@ async function sbPost(table: string, rows: Record<string, unknown>[]) {
   }
 }
 
+/** PATCH 更新（用于名句释义回填等增量修复） */
+async function sbPatch(table: string, filter: string, data: Record<string, unknown>) {
+  try {
+    const r = await http(`${REST}/${table}?${filter}`, {
+      method: "PATCH",
+      headers: sbHeaders({ Prefer: "return=minimal" }),
+      body: JSON.stringify(data),
+      timeout: 25_000,
+    });
+    return r?.status ?? 0;
+  } catch (e) {
+    say(`  ✗ PATCH 异常 ${table}: ${e}`);
+    return 0;
+  }
+}
+
 async function sbDelete(path: string) {
   try {
     const r = await http(`${REST}/${path}`, { method: "DELETE", headers: sbHeaders(), timeout: 25_000 });
@@ -220,10 +236,32 @@ async function sbDelete(path: string) {
 }
 
 /** 一次拉整列做内存去重（替代原版逐条 GET，把 60+ 次往返压成 1 次） */
-async function existingSet(table: string, col: string, extra = "", limit = 1000): Promise<Set<string>> {
-  const rows = await sbGet<Record<string, unknown>>(
-    `${table}?select=${col}${extra}&limit=${limit}`
-  );
+/**
+ * 分页取全表（绕过 Supabase PostgREST 服务端 max-rows=1000 硬截断）。
+ * ⚠️ 实测 limit=20000 也只返回 1000 行，必须用 limit+offset 循环分页。
+ */
+async function sbGetAll(
+  table: string,
+  select: string,
+  extra = "",
+  pageSize = 1000,
+  maxRows = 30000
+): Promise<Record<string, unknown>[]> {
+  const out: Record<string, unknown>[] = [];
+  for (let offset = 0; offset < maxRows; offset += pageSize) {
+    const rows = await sbGet<Record<string, unknown>>(
+      `${table}?select=${select}${extra}&limit=${pageSize}&offset=${offset}`
+    );
+    out.push(...rows);
+    if (rows.length < pageSize) break; // 最后一页不满页 = 取完
+  }
+  return out;
+}
+
+async function existingSet(table: string, col: string, extra = "", limit = 30000): Promise<Set<string>> {
+  // ⚠️ 必须分页取全量：曾用 limit=1000（且服务端 max-rows=1000 硬截断），
+  // quotes 表超千后去重失效，同日多轮 cron 全部重复入库（2026-09-09 实测）
+  const rows = await sbGetAll(table, col, extra, 1000, limit);
   return new Set(rows.map((r) => String(r[col] ?? "")));
 }
 
@@ -574,7 +612,7 @@ async function fetchQuotes() {
     if (cands.length >= 30) break;
   }
 
-  const have = await existingSet("quotes", "quote", "", 1000);
+  const have = await existingSet("quotes", "quote");
   const fresh = cands.filter((c) => !have.has(c.quote));
   say(`  · 列表 ${cands.length} 条，新增 ${fresh.length} 条`);
 
@@ -590,20 +628,104 @@ async function fetchQuotes() {
         url: c.url,
       };
       if (!c.url) return item;
-      const d = await httpText(c.url, { timeout: 20_000 });
-      const ds = parse(d);
-      for (const p of qsa(ds, ".contson p")) {
-        const raw = textNodesOf(p).join("").trim();
-        const strip = (s: string) => s.replace(/^[：:，,。\s\t]+/, "").slice(0, 200);
-        if (raw.startsWith("译文")) item.translation = strip(raw.slice(2));
-        else if (raw.startsWith("注释")) item.annotation = strip(raw.slice(2));
-        else if (raw.startsWith("赏析")) item.analysis = strip(raw.slice(2));
-      }
+      await fillQuoteDetail(item, c.url);
       return item;
     })
   ).filter(Boolean) as Record<string, unknown>[];
 
-  return await sbPost("quotes", items);
+  const written = await sbPost("quotes", items);
+
+  // ── 存量释义回填：每次运行顺带修复最旧的 6 条全空记录（历史抓取失败/反爬拦截）──
+  try {
+    const empties = await sbGet<{ id: string; url: string }[]>(
+      "quotes?select=id,url&translation=eq.&annotation=eq.&analysis=eq.&url=neq.&order=crawled_at.asc&limit=6"
+    );
+    if (empties.length) {
+      say(`  · 回填存量空释义 ${empties.length} 条...`);
+      let fixed = 0;
+      for (const row of empties) {
+        if (!row.url) continue;
+        const patch: Record<string, unknown> = {};
+        const tmp: Record<string, unknown> = { translation: "", annotation: "", analysis: "" };
+        await fillQuoteDetail(tmp, row.url);
+        if (tmp.translation) patch.translation = tmp.translation;
+        if (tmp.annotation) patch.annotation = tmp.annotation;
+        if (tmp.analysis) patch.analysis = tmp.analysis;
+        if (Object.keys(patch).length) {
+          await sbPatch("quotes", `id=eq.${row.id}`, patch);
+          fixed++;
+        }
+      }
+      if (fixed) say(`  ✓ 回填成功 ${fixed} 条`);
+    }
+  } catch (e) {
+    say(`  ! 回填异常（不影响主流程）: ${e}`);
+  }
+
+  return written;
+}
+
+/**
+ * 抓取名句详情页并解析译文/注释/赏析，写回 item。
+ * 解析全空时视为被反爬拦截/页面异常，延迟后重试一次。
+ */
+async function fillQuoteDetail(item: Record<string, unknown>, url: string) {
+  const parseDetail = (html: string) => {
+    const ds = parse(html);
+    for (const p of qsa(ds, ".contson p")) {
+      const raw = textNodesOf(p).join("").trim();
+      const strip = (s: string) => s.replace(/^[：:，,。\s\t]+/, "").slice(0, 200);
+      if (raw.startsWith("译文")) item.translation = strip(raw.slice(2));
+      else if (raw.startsWith("注释")) item.annotation = strip(raw.slice(2));
+      else if (raw.startsWith("赏析")) item.analysis = strip(raw.slice(2));
+    }
+  };
+  const d = await httpText(url, { timeout: 20_000 });
+  if (d) parseDetail(d);
+  if (!item.translation && !item.annotation && !item.analysis) {
+    // 首次解析全空 → 等待后重试一次（降低并发反爬误伤）
+    await new Promise((r) => setTimeout(r, 1500));
+    const d2 = await httpText(url, { timeout: 20_000 });
+    if (d2) parseDetail(d2);
+  }
+}
+
+/**
+ * 清理 quotes 表重复行（?dedupe=quotes 触发，一次性维护动作）。
+ * 背景：existingSet 曾用 limit=1000，表超千后去重失效，同日多轮 cron 重复入库。
+ * 策略：按 quote 分组，保留「释义字段非空数最多」的一条（平局保留 id 最小=最早），
+ *      其余分批删除。返回删除数。
+ */
+async function dedupeQuotes(): Promise<{ removed: number }> {
+  say("[维护] 清理重复名句...");
+  const rows = await sbGetAll("quotes", "id,quote,translation,annotation,analysis", "", 1000, 30000) as {
+    id: string; quote: string; translation: string; annotation: string; analysis: string;
+  }[];
+  const groups = new Map<string, { id: string; score: number }>();
+  for (const r of rows) {
+    const score = (r.translation ? 1 : 0) + (r.annotation ? 1 : 0) + (r.analysis ? 1 : 0);
+    const cur = groups.get(r.quote);
+    if (!cur || score > cur.score) groups.set(r.quote, { id: r.id, score });
+    // 平局保留先出现的（sbGet 未排序时默认主键序，先出现=更早插入）
+  }
+  const keep = new Set([...groups.values()].map((v) => v.id));
+  const toDelete = rows.filter((r) => !keep.has(r.id)).map((r) => r.id);
+  say(`  · 总 ${rows.length} 条，保留 ${keep.size} 组，待删 ${toDelete.length} 条`);
+  let removed = 0;
+  const BATCH = 100;
+  for (let i = 0; i < toDelete.length; i += BATCH) {
+    const batch = toDelete.slice(i, i + BATCH);
+    const inList = batch.join(",");
+    const r = await http(`${REST}/quotes?id=in.(${inList})`, {
+      method: "DELETE",
+      headers: sbHeaders({ Prefer: "return=representation" }),
+      timeout: 30_000,
+    });
+    if (r && (r.status === 200 || r.status === 204)) removed += batch.length;
+    else say(`  ! 批次删除失败 status=${r?.status}`);
+  }
+  say(`  ✓ 已删除重复 ${removed} 条`);
+  return { removed };
 }
 
 // ============================================================
@@ -813,6 +935,15 @@ Deno.serve(async (req: Request) => {
 
   const force = url.searchParams.get("all") === "1";
   const sync = url.searchParams.get("sync") === "1";
+  // ?dedupe=quotes：一次性清理重复名句（历史去重失效导致的重复行），保留每组释义最全的一条
+  const dedupeTarget = url.searchParams.get("dedupe") || "";
+  if (dedupeTarget) {
+    if (dedupeTarget !== "quotes") {
+      return json({ ok: false, error: `unknown dedupe target: ${dedupeTarget}` }, 400);
+    }
+    const result = await dedupeQuotes();
+    return json({ ok: true, dedupe: "quotes", ...result });
+  }
   // ?feeds=sspai / chinanews：只抓指定新闻源（供 8:30 档单独补抓少数派等场景）
   const feedAlias = url.searchParams.get("feeds") || "";
   const onlyFeed = feedAlias ? FEED_ALIASES[feedAlias] : undefined;
