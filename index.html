@@ -1154,7 +1154,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-09-07e';
+const BUILD_VERSION = '2026-09-09a';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -2232,19 +2232,22 @@ async function saveWL(data) {
 // 词语积累
 // ============================================================
 let wbActiveCat = '全部'; // 当前分类筛选
+let wbItems = [];        // 最近一次加载的词条（供编辑回填）
+let wbEditingId = null;  // 非空 = 编辑模式
 
 async function loadWordbank() {
   try {
     const items = await sbQuery('wordbank', { order: 'created_at desc', limit: 200 });
-    const cats = ['全部', ...Array.from(new Set((items || []).map(i => i.category || '未分类')))];
+    wbItems = items || [];
+    const cats = ['全部', ...Array.from(new Set(wbItems.map(i => i.category || '未分类')))];
     const active = wbActiveCat || '全部';
     $('wb-chips').innerHTML = cats.map(c => `<button class="chip ${c === active ? 'active' : ''}\" onclick="filterWB('${escAttr(c)}')">${esc(c)}</button>`).join('');
     // 统计卡片
     $('wb-stats').innerHTML = [
-      { label: '收藏总数', value: (items || []).length, cls: 'stat-blue' },
+      { label: '收藏总数', value: wbItems.length, cls: 'stat-blue' },
       { label: '分类数', value: Math.max(0, cats.length - 1), cls: 'stat-purple' }
     ].map(s => `<div class="stat ${s.cls}"><div class="stat-label">${s.label}</div><div class="stat-value">${s.value}</div></div>`).join('');
-    renderWBList(items || [], active);
+    renderWBList(wbItems, active);
   } catch(e) {
     console.error('Wordbank error:', e);
     showBanner('词语积累加载失败');
@@ -2270,6 +2273,7 @@ function renderWBList(items, filter) {
         </div>
       </div>
       <div class="item-actions">
+        <button class="linkbtn" onclick="editWB('${i.id}')">编辑</button>
         <button class="linkbtn" onclick="deleteWB('${i.id}')">删除</button>
       </div>
     </div>
@@ -2281,6 +2285,35 @@ async function saveWB(data) {
   catch(e) { toast('保存失败：' + (e.message || e)); }
 }
 function clearOcrHint() { const p = $('wb-panel'); const h = p && p.querySelector('.ocr-hint'); if (h) h.remove(); }
+
+/** 编辑已收藏词条：回填表单进入编辑模式，保存走 sbUpdate */
+function editWB(id) {
+  const it = (wbItems || []).find(x => x.id === id);
+  if (!it) return;
+  wbEditingId = id;
+  $('wb-word').value = it.word || '';
+  $('wb-meaning').value = it.meaning || '';
+  $('wb-source').value = it.source || '';
+  // 分类不在固定选项里（如「名句」）时动态补一个 option
+  const sel = $('wb-cat');
+  const cat = it.category || '未分类';
+  if (![...sel.options].some(o => o.value === cat)) {
+    const opt = document.createElement('option');
+    opt.value = cat; opt.text = cat;
+    sel.appendChild(opt);
+  }
+  sel.value = cat;
+  clearOcrHint();
+  $('wb-panel').classList.add('open');
+  $('wb-word').focus();
+}
+
+/** 退出编辑模式并清空表单 */
+function resetWBForm() {
+  wbEditingId = null;
+  $('wb-word').value = ''; $('wb-meaning').value = ''; $('wb-source').value = '';
+  $('wb-panel').classList.remove('open');
+}
 
 async function deleteWB(id) {
   if (!await confirmDialog('删除这个词？')) return;
@@ -2527,11 +2560,11 @@ function renderReadContent(tab, data) {
         </div>
         <div class="quote-body-text">「${esc(quote.quote)}」</div>
         ${quote.author ? `<div class="quote-author">—— ${esc(quote.author)}</div>` : ''}
-        <div class="quote-fields">
+        ${(quote.translation || quote.annotation || quote.analysis) ? `<div class="quote-fields">
           ${quote.translation ? `<div class="quote-field"><span class="quote-field-label">译文</span><span class="quote-field-body">${esc(quote.translation)}</span></div>` : ''}
           ${quote.annotation ? `<div class="quote-field"><span class="quote-field-label">注释</span><span class="quote-field-body">${esc(quote.annotation)}</span></div>` : ''}
           ${quote.analysis ? `<div class="quote-field"><span class="quote-field-label">赏析</span><span class="quote-field-body">${esc(quote.analysis)}</span></div>` : ''}
-        </div>
+        </div>` : ''}
         <div class="daily-footer">
           ${quote.source ? `来源：${esc(quote.source)}` : ''}
           ${quote.url ? `<br><a href="${esc(quote.url)}" target="_blank">前往古诗文网查看原篇及完整释义 ↗</a>` : ''}
@@ -2763,8 +2796,8 @@ function bindEvents() {
   });
 
   // 词语积累
-  bind('wb-add-btn', 'click', () => $('wb-panel').classList.toggle('open'));
-  bind('wb-cancel', 'click', () => { clearOcrHint(); $('wb-panel').classList.remove('open'); });
+  bind('wb-add-btn', 'click', () => { if (!$('wb-panel').classList.contains('open')) resetWBForm(); $('wb-panel').classList.toggle('open'); });
+  bind('wb-cancel', 'click', () => { resetWBForm(); clearOcrHint(); });
   bind('wb-camera-btn', 'click', () => $('wb-camera-input').click());
   bind('wb-upload-btn', 'click', () => $('wb-upload-input').click());
   bind('wb-camera-input', 'change', async e => { const f = e.target.files[0]; if (f) { const d = await compressImage(f); if (d) await recognizeWord(d); } });
@@ -2772,8 +2805,16 @@ function bindEvents() {
   bind('wb-save', 'click', async () => {
     const word = $('wb-word').value.trim();
     if (!word) { toast('请输入词语'); return; }
-    await saveWB({ word, meaning: $('wb-meaning').value.trim(), category: $('wb-cat').value, source: $('wb-source').value.trim(), created_at: new Date().toISOString() });
-    $('wb-word').value = ''; $('wb-meaning').value = ''; $('wb-source').value = ''; $('wb-panel').classList.remove('open');
+    const data = { word, meaning: $('wb-meaning').value.trim(), category: $('wb-cat').value, source: $('wb-source').value.trim() };
+    if (wbEditingId) {
+      // 编辑模式：PATCH 更新已有词条
+      try { await sbUpdate('wordbank', wbEditingId, data); toast('已更新'); resetWBForm(); await loadWordbank(); }
+      catch(e) { toast('更新失败'); }
+    } else {
+      data.created_at = new Date().toISOString();
+      await saveWB(data);
+      resetWBForm();
+    }
   });
 
   // 每日一读名句卡片「＋ 收藏」——事件委托，避免模板字符串转义问题
