@@ -1154,7 +1154,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-09-09a';
+const BUILD_VERSION = '2026-09-10a';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -2415,23 +2415,31 @@ async function loadDailyRead(tab = 'news') {
   try {
     // 新闻按来源「配额」分开查询，而非统一 limit 取前 N 条：
     // 中新网 30 条/天为主源，ZAKER~7条+少数派~8条为点缀（更新慢，必须配额保证可见）
-    const [mainNews, garnishSspai, garnishZaker, shijing, quotes, comments] = await Promise.all([
+    const [mainNews, garnishSspai, garnishZaker, zaobaoNews, shijing, quotes, comments] = await Promise.all([
       // 主源：中新网 RSS 滚动新闻（每日 ~30 条，稳定可靠）
       sbQuery('news', { filter: { property: 'source', operator: 'eq', value: '中新网' }, order: 'crawled_at desc', limit: 40 }),
-      // 点缀：少数派（更新少、优先消耗、派早报置顶）+ ZAKER（title 去重后 ~7 条/天）
+      // 点缀：少数派（更新少、优先消耗）+ ZAKER（title 去重后 ~7 条/天）
       sbQuery('news', { filter: { property: 'source', operator: 'eq', value: '少数派' }, order: 'crawled_at desc', limit: 8 }).catch(() => []),
       sbQuery('news', { filter: { property: 'source', operator: 'eq', value: 'ZAKER' }, order: 'crawled_at desc', limit: 10 }).catch(() => []),
+      // 派早报：走 tag 页专用源（少数派首页横幅发布时间不固定，8:30 档常抓空）
+      sbQuery('news', { filter: { property: 'source', operator: 'eq', value: '派早报' }, order: 'crawled_at desc', limit: 3 }).catch(() => []),
       sbQuery('shijing', { order: 'title asc', limit: 100 }),
       sbQuery('quotes', { order: 'crawled_at desc', limit: 100 }),
       sbQuery('comments', { order: 'crawled_at desc', limit: 20 })
     ]);
+    // 派早报置顶：取专用源最新一条；若专用源暂空（历史数据未迁移完），
+    // 回退到从少数派列表里按标题前缀找，保证置顶不丢
+    const pinned = (zaobaoNews || [])[0]
+      || (garnishSspai || []).find(n => (n.title || '').startsWith('派早报'))
+      || null;
+    const pinnedUrl = pinned ? pinned.url : null;
+    // 从其它列表里剔除已置顶的那条，避免首屏出现两次
+    const dropPinned = (arr) => (arr || []).filter(n => !pinnedUrl || n.url !== pinnedUrl);
     // 点缀池：少数派在前（提前），ZAKER 在后（殿后）；两者可连续成组
-    const garnishNews = [...(garnishSspai || []), ...(garnishZaker || [])];
+    const garnishNews = [...dropPinned(garnishSspai), ...dropPinned(garnishZaker)];
     // 每 3 条主源插 1~2 条点缀（perGroup=2）
-    const news = interleaveNews(mainNews, garnishNews, 3, 2);
-    // 派早报置顶：少数派每天早上的「派早报」是一日要闻精选，提到头条位（hero）
-    const zaobaoIdx = news.findIndex(n => n.source === '少数派' && (n.title || '').startsWith('派早报'));
-    if (zaobaoIdx > 0) news.unshift(news.splice(zaobaoIdx, 1)[0]);
+    const news = interleaveNews(dropPinned(mainNews), garnishNews, 3, 2);
+    if (pinned) news.unshift(pinned);
 
     renderReadContent(tab, { news, shijing, quotes, comments });
   } catch(e) {
