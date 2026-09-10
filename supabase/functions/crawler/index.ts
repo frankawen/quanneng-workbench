@@ -489,13 +489,25 @@ async function fetchNews(dateStr: string, onlySource?: string) {
   });
   for (const p of results) if (p) all.push(...p);
 
-  if (!all.length) {
+  // 批内 URL 去重保险：同一轮内多源/解析器重复出现的链接只保留第一条
+  const batchSeen = new Set<string>();
+  const deduped = all.filter((it) => {
+    const u = String(it.url || "");
+    if (!u || batchSeen.has(u)) return false;
+    batchSeen.add(u);
+    return true;
+  });
+  if (deduped.length !== all.length) say(`  · 批内去重: ${all.length} → ${deduped.length}`);
+
+  if (!deduped.length) {
     say("  ! 无新闻数据");
     return 0;
   }
   const cutoff = bjDateMinus(7);
-  const have = await existingSet("news", "url", `&date=gte.${cutoff}`, 1000);
-  const fresh = all.filter((it) => !have.has(String(it.url)));
+  // ⚠️ 不要传 limit 覆盖默认值：news 表已过千行（1350），写 1000 会导致
+  // 只读前 1000 行、最新数据不在去重集合 → 同日多轮 cron 全部重复入库（2026-09-10 实测）
+  const have = await existingSet("news", "url", `&date=gte.${cutoff}`);
+  const fresh = deduped.filter((it) => !have.has(String(it.url)));
   const n = await sbPost("news", fresh);
   await sbDelete(`news?date=lt.${cutoff}`); // 清理 7 天前旧新闻
   return n;
@@ -524,7 +536,7 @@ async function fetchShijing() {
     if (cands.length >= 30) break;
   }
 
-  const have = await existingSet("shijing", "title", "", 1000);
+  const have = await existingSet("shijing", "title");
   const fresh = cands.filter((c) => !have.has(c.title)); // 只对新条目抓详情
   say(`  · 列表 ${cands.length} 条，新增 ${fresh.length} 条`);
 
@@ -717,6 +729,42 @@ async function dedupeQuotes(): Promise<{ removed: number }> {
     const batch = toDelete.slice(i, i + BATCH);
     const inList = batch.join(",");
     const r = await http(`${REST}/quotes?id=in.(${inList})`, {
+      method: "DELETE",
+      headers: sbHeaders({ Prefer: "return=representation" }),
+      timeout: 30_000,
+    });
+    if (r && (r.status === 200 || r.status === 204)) removed += batch.length;
+    else say(`  ! 批次删除失败 status=${r?.status}`);
+  }
+  say(`  ✓ 已删除重复 ${removed} 条`);
+  return { removed };
+}
+
+/**
+ * 清理 news 表重复行（?dedupe=news 触发，一次性维护动作）。
+ * 背景：fetchNews 的 existingSet 曾传 limit=1000，news 表过千行后去重失效，
+ *      同日 4 枪 cron 重复入库（2026-09-10 实测 1350 行、中新网 26/30 重复）。
+ * 策略：按 url 分组，保留 crawled_at 最早的一条，其余分批删除。返回删除数。
+ */
+async function dedupeNews(): Promise<{ removed: number }> {
+  say("[维护] 清理重复新闻...");
+  const rows = await sbGetAll("news", "id,url,crawled_at", "", 1000, 30000) as {
+    id: string; url: string; crawled_at: string;
+  }[];
+  const groups = new Map<string, { id: string; at: string }>();
+  for (const r of rows) {
+    const cur = groups.get(r.url);
+    if (!cur || (r.crawled_at || "") < cur.at) groups.set(r.url, { id: r.id, at: r.crawled_at || "" });
+  }
+  const keep = new Set([...groups.values()].map((v) => v.id));
+  const toDelete = rows.filter((r) => !keep.has(r.id)).map((r) => r.id);
+  say(`  · 总 ${rows.length} 条，保留 ${keep.size} 组，待删 ${toDelete.length} 条`);
+  let removed = 0;
+  const BATCH = 100;
+  for (let i = 0; i < toDelete.length; i += BATCH) {
+    const batch = toDelete.slice(i, i + BATCH);
+    const inList = batch.join(",");
+    const r = await http(`${REST}/news?id=in.(${inList})`, {
       method: "DELETE",
       headers: sbHeaders({ Prefer: "return=representation" }),
       timeout: 30_000,
@@ -935,14 +983,14 @@ Deno.serve(async (req: Request) => {
 
   const force = url.searchParams.get("all") === "1";
   const sync = url.searchParams.get("sync") === "1";
-  // ?dedupe=quotes：一次性清理重复名句（历史去重失效导致的重复行），保留每组释义最全的一条
+  // ?dedupe=quotes|news：一次性清理重复行（历史去重失效导致的重复行），保留每组最早/最全的一条
   const dedupeTarget = url.searchParams.get("dedupe") || "";
   if (dedupeTarget) {
-    if (dedupeTarget !== "quotes") {
+    if (dedupeTarget !== "quotes" && dedupeTarget !== "news") {
       return json({ ok: false, error: `unknown dedupe target: ${dedupeTarget}` }, 400);
     }
-    const result = await dedupeQuotes();
-    return json({ ok: true, dedupe: "quotes", ...result });
+    const result = dedupeTarget === "quotes" ? await dedupeQuotes() : await dedupeNews();
+    return json({ ok: true, dedupe: dedupeTarget, ...result });
   }
   // ?feeds=sspai / chinanews：只抓指定新闻源（供 8:30 档单独补抓少数派等场景）
   const feedAlias = url.searchParams.get("feeds") || "";
