@@ -173,31 +173,52 @@ function sbHeaders(extra: Record<string, string> = {}) {
   };
 }
 
-async function sbGet<T = any>(path: string): Promise<T[]> {
+/**
+ * GET 一页数据。
+ * ⚠️ 返回 null 表示「请求失败」（网络/超时/非 2xx），与「确实没有数据」（[]）严格区分。
+ * 历史坑：旧实现失败时静默返回 []，导致 existingSet 拿到空集 → 去重失效 →
+ *         同一批数据被每枪 cookie 反复全量写入（诗经重复 6 轮、新闻重复 218 条均因此）。
+ */
+async function sbGet<T = any>(path: string): Promise<T[] | null> {
   try {
     const r = await http(`${REST}/${path}`, { headers: sbHeaders(), timeout: 25_000 });
-    if (!r || !r.ok) return [];
+    if (!r || !r.ok) return null;
     return (await r.json()) as T[];
   } catch {
-    return [];
+    return null;
   }
 }
 
-async function sbPost(table: string, rows: Record<string, unknown>[]) {
+async function sbPost(table: string, rows: Record<string, unknown>[], onConflict?: string) {
   if (!rows.length) {
     say(`  · ${table} 无新数据，跳过`);
     return 0;
   }
-  try {
-    const r = await http(`${REST}/${table}`, {
+  // conflict 时用 upsert-ignore 语义：即使应用层去重失效，数据库唯一约束也会兜住重复行
+  const doPost = async (conflict?: string) => {
+    const qs = conflict ? `?on_conflict=${encodeURIComponent(conflict)}` : "";
+    const pref = conflict ? "return=minimal,resolution=ignore-duplicates" : "return=minimal";
+    return await http(`${REST}/${table}${qs}`, {
       method: "POST",
-      headers: sbHeaders({ Prefer: "return=minimal" }),
+      headers: sbHeaders({ Prefer: pref }),
       body: JSON.stringify(rows),
       timeout: 30_000,
     });
+  };
+  try {
+    let r = await doPost(onConflict);
     if (r && (r.status === 200 || r.status === 201)) {
-      say(`  ✓ 写入 ${table}: ${rows.length} 条`);
+      say(`  ✓ 写入 ${table}: ${rows.length} 条${onConflict ? "（唯一约束去重）" : ""}`);
       return rows.length;
+    }
+    // 目标列还没建唯一约束时 PostgREST 返回 400/409 → 自动降级为普通插入，避免整批丢失
+    if (onConflict && r && (r.status === 400 || r.status === 409)) {
+      say(`  · ${table} 尚无唯一约束(${onConflict})，降级为普通插入`);
+      r = await doPost();
+      if (r && (r.status === 200 || r.status === 201)) {
+        say(`  ✓ 写入 ${table}: ${rows.length} 条`);
+        return rows.length;
+      }
     }
     const txt = r ? (await r.text().catch(() => "")).slice(0, 200) : "no response";
     say(`  ✗ 写入失败 ${table} ${r?.status}: ${txt}`);
@@ -246,12 +267,13 @@ async function sbGetAll(
   extra = "",
   pageSize = 1000,
   maxRows = 30000
-): Promise<Record<string, unknown>[]> {
+): Promise<Record<string, unknown>[] | null> {
   const out: Record<string, unknown>[] = [];
   for (let offset = 0; offset < maxRows; offset += pageSize) {
     const rows = await sbGet<Record<string, unknown>>(
       `${table}?select=${select}${extra}&limit=${pageSize}&offset=${offset}`
     );
+    if (rows === null) return null; // 任一页失败 = 整体失败，交由调用方决策（绝不当作空集）
     out.push(...rows);
     if (rows.length < pageSize) break; // 最后一页不满页 = 取完
   }
@@ -262,6 +284,10 @@ async function existingSet(table: string, col: string, extra = "", limit = 30000
   // ⚠️ 必须分页取全量：曾用 limit=1000（且服务端 max-rows=1000 硬截断），
   // quotes 表超千后去重失效，同日多轮 cron 全部重复入库（2026-09-09 实测）
   const rows = await sbGetAll(table, col, extra, 1000, limit);
+  // ⚠️ 读取失败必须抛错，不能退化成空集：空集会让「全部数据」都被判定为新增 → 整批重复写入
+  if (rows === null) {
+    throw new Error(`existingSet(${table}.${col}) 读取失败，为避免重复入库已中止本轮`);
+  }
   return new Set(rows.map((r) => String(r[col] ?? "")));
 }
 
@@ -591,13 +617,35 @@ async function fetchShijing() {
   const fresh = cands.filter((c) => !have.has(c.title)); // 只对新条目抓详情
   say(`  · 列表 ${cands.length} 条，新增 ${fresh.length} 条`);
 
+  let skipped = 0;
   const items = (
-    await mapLimit(fresh, 6, async (c) => {
-      const d = await httpText(c.url, { timeout: 20_000 });
-      const ds = parse(d);
-      let content = c.title;
-      const block = qs(ds, ".contson");
-      if (block) content = squash(joinText(block)).slice(0, 90) || c.title;
+    // 并发降到 3：古文岛对并发详情页请求较敏感，6 并发时约 1/3 会被限流返回空壳页
+    await mapLimit(fresh, 3, async (c) => {
+      // 拉取正文：首次解析失败多半是源站限流误伤（并发抓详情页时常见），
+      // 等待 + 抖动后重试一次，避免把好条目误判成坏条目丢掉。
+      let ds: any = null;
+      let body = "";
+      for (let attempt = 0; attempt < 2; attempt++) {
+        if (attempt) await new Promise((r) => setTimeout(r, 1200 + Math.random() * 900));
+        const d = await httpText(c.url, { timeout: 20_000 });
+        if (!d) continue;
+        const dr = parse(d);
+        const block = qs(dr, ".contson");
+        const b = block ? squash(joinText(block)) : "";
+        if (b.length >= 8) {
+          ds = dr;
+          body = b;
+          break;
+        }
+      }
+      // 🔴 质量门禁：两轮都解析不出正文 → 跳过，绝不退化成标题入库。
+      //    历史坑：旧实现用 `content = c.title` 兜底，导致「樛木」这类只有标题、
+      //    无正文无译文的坏记录混进表内 —— 这正是前端「诗经显示不全」的直接原因。
+      if (!ds) {
+        skipped++;
+        return null;
+      }
+      const content = body.slice(0, 90);
 
       let section = "诗经";
       for (const el of qsa(ds, ".sons .cont")) {
@@ -646,7 +694,13 @@ async function fetchShijing() {
     })
   ).filter(Boolean) as Record<string, unknown>[];
 
-  return await sbPost("shijing", items);
+  if (skipped) say(`  · 跳过解析失败/正文为空条目: ${skipped} 条（拒绝坏数据入库）`);
+  if (!items.length) {
+    say("  · 无有效诗经数据");
+    return 0;
+  }
+  // 传 onConflict=title：若 DB 已建唯一约束则双保险（应用层去重失效也不会重复行）
+  return await sbPost("shijing", items, "title");
 }
 
 // ============================================================
@@ -700,9 +754,9 @@ async function fetchQuotes() {
 
   // ── 存量释义回填：每次运行顺带修复最旧的 6 条全空记录（历史抓取失败/反爬拦截）──
   try {
-    const empties = await sbGet<{ id: string; url: string }[]>(
+    const empties = (await sbGet<{ id: string; url: string }[]>(
       "quotes?select=id,url&translation=eq.&annotation=eq.&analysis=eq.&url=neq.&order=crawled_at.asc&limit=6"
-    );
+    )) ?? [];
     if (empties.length) {
       say(`  · 回填存量空释义 ${empties.length} 条...`);
       let fixed = 0;
@@ -761,9 +815,20 @@ async function fillQuoteDetail(item: Record<string, unknown>, url: string) {
  */
 async function dedupeQuotes(): Promise<{ removed: number }> {
   say("[维护] 清理重复名句...");
-  const rows = await sbGetAll("quotes", "id,quote,translation,annotation,analysis", "", 1000, 30000) as {
-    id: string; quote: string; translation: string; annotation: string; analysis: string;
-  }[];
+  const rows = (await sbGetAll(
+    "quotes",
+    "id,quote,translation,annotation,analysis",
+    "",
+    1000,
+    30000
+  )) as {
+    id: string;
+    quote: string;
+    translation: string;
+    annotation: string;
+    analysis: string;
+  }[] | null;
+  if (!rows) throw new Error("读取 quotes 失败");
   const groups = new Map<string, { id: string; score: number }>();
   for (const r of rows) {
     const score = (r.translation ? 1 : 0) + (r.annotation ? 1 : 0) + (r.analysis ? 1 : 0);
@@ -799,9 +864,12 @@ async function dedupeQuotes(): Promise<{ removed: number }> {
  */
 async function dedupeNews(): Promise<{ removed: number }> {
   say("[维护] 清理重复新闻...");
-  const rows = await sbGetAll("news", "id,url,crawled_at", "", 1000, 30000) as {
-    id: string; url: string; crawled_at: string;
-  }[];
+  const rows = (await sbGetAll("news", "id,url,crawled_at", "", 1000, 30000)) as {
+    id: string;
+    url: string;
+    crawled_at: string;
+  }[] | null;
+  if (!rows) throw new Error("读取 news 失败");
   const groups = new Map<string, { id: string; at: string }>();
   for (const r of rows) {
     const cur = groups.get(r.url);
@@ -825,6 +893,64 @@ async function dedupeNews(): Promise<{ removed: number }> {
   }
   say(`  ✓ 已删除重复 ${removed} 条`);
   return { removed };
+}
+
+/**
+ * 清理 shijing 表重复行（?dedupe=shijing 触发，一次性维护动作）。
+ * 背景：existingSet 读取失败时旧实现静默返回空集 → 每枪 30 条全量重复写入
+ *      （2026-09-14 实测 181 行里只有 30 个唯一 title，最多重复 7 次）。
+ * 策略：按 title 分组，保留「正文最长 + 释义字段非空数最多」的一条，其余分批删除。
+ */
+async function dedupeShijing(): Promise<{ removed: number; kept: number; total: number }> {
+  say("[维护] 清理重复诗经...");
+  const rows = (await sbGetAll(
+    "shijing",
+    "id,title,content,translation,annotation,analysis",
+    "",
+    1000,
+    30000
+  )) as
+    | {
+        id: string;
+        title: string;
+        content: string;
+        translation: string;
+        annotation: string;
+        analysis: string;
+      }[]
+    | null;
+  if (!rows) throw new Error("读取 shijing 失败");
+
+  // score：正文长度优先（质量门禁后正文必然完整），其次释义完整度
+  const score = (r: (typeof rows)[number]) =>
+    Math.min((r.content || "").length, 200) * 10 +
+    (r.translation ? 1 : 0) +
+    (r.annotation ? 1 : 0) +
+    (r.analysis ? 1 : 0);
+  const groups = new Map<string, { id: string; score: number }>();
+  for (const r of rows) {
+    const s = score(r);
+    const cur = groups.get(r.title);
+    if (!cur || s > cur.score) groups.set(r.title, { id: r.id, score: s });
+  }
+  const keep = new Set([...groups.values()].map((v) => v.id));
+  const toDelete = rows.filter((r) => !keep.has(r.id)).map((r) => r.id);
+  say(`  · 总 ${rows.length} 条，保留 ${keep.size} 组，待删 ${toDelete.length} 条`);
+
+  let removed = 0;
+  const BATCH = 100;
+  for (let i = 0; i < toDelete.length; i += BATCH) {
+    const batch = toDelete.slice(i, i + BATCH);
+    const r = await http(`${REST}/shijing?id=in.(${batch.join(",")})`, {
+      method: "DELETE",
+      headers: sbHeaders({ Prefer: "return=representation" }),
+      timeout: 30_000,
+    });
+    if (r && (r.status === 200 || r.status === 204)) removed += batch.length;
+    else say(`  ! 批次删除失败 status=${r?.status}`);
+  }
+  say(`  ✓ 已删除重复 ${removed} 条，保留 ${keep.size} 条`);
+  return { removed, kept: keep.size, total: rows.length };
 }
 
 // ============================================================
@@ -958,38 +1084,61 @@ async function fetchDailyRead(dateStr: string) {
 // ============================================================
 // 抓取主体（可从 handler 同步 await，也可交给 waitUntil 后台跑）
 // ============================================================
-async function runCrawl(force: boolean, onlyFeed?: string[]) {
+async function runCrawl(force: boolean, onlyFeed?: string[], onlySource?: string) {
   log.length = 0;
   const bj = bjParts();
   const feedLabel = onlyFeed?.length ? onlyFeed.join("/") : "";
+  const scopeLabel = onlySource ? `仅 ${onlySource}` : feedLabel;
   say(
-    `[${bj.date} ${String(bj.hour).padStart(2, "0")}:${String(bj.minute).padStart(2, "0")}] 开始爬取（北京时间 ${bj.hour} 点档）${feedLabel ? `，指定源: ${feedLabel}` : ""}`
+    `[${bj.date} ${String(bj.hour).padStart(2, "0")}:${String(bj.minute).padStart(2, "0")}] 开始爬取（北京时间 ${bj.hour} 点档）${scopeLabel ? `，指定源: ${scopeLabel}` : ""}`
   );
 
   const res: Record<string, number> = {};
   const t0 = Date.now();
 
+  // 每个数据源独立兜底：某一源读取失败（如 existingSet 抛错）不应拖垮其它源
+  const safe = async (name: string, fn: () => Promise<number>) => {
+    try {
+      res[name] = await fn();
+    } catch (e) {
+      res[name] = -1;
+      say(`  ✗ ${name} 本轮跳过: ${e instanceof Error ? e.message : e}`);
+    }
+  };
+
   try {
-    if (onlyFeed?.length) {
+    if (onlySource) {
+      // 单源重抓（维护入口 ?only=shijing / quotes / news / comments / daily_read）
+      const table: Record<string, () => Promise<number>> = {
+        news: () => fetchNews(bj.date),
+        shijing: () => fetchShijing(),
+        quotes: () => fetchQuotes(),
+        comments: () => fetchComments(bj),
+        daily_read: () => fetchDailyRead(bj.date),
+      };
+      const fn = table[onlySource];
+      if (!fn) throw new Error(`unknown only: ${onlySource}`);
+      await safe(onlySource, fn);
+    } else if (onlyFeed?.length) {
       // 指定源抓取（如 8:30 档补抓少数派 + 派早报，抢当天的早报）
-      res.news = await fetchNews(bj.date, onlyFeed);
+      await safe("news", () => fetchNews(bj.date, onlyFeed));
     } else if (force || ![5, 6, 12, 17].includes(bj.hour)) {
       // 全量补抓（手动 / 延迟补跑）
-      res.news = await fetchNews(bj.date);
-      res.shijing = await fetchShijing();
-      res.quotes = await fetchQuotes();
-      res.comments = await fetchComments(bj);
-      res.daily_read = await fetchDailyRead(bj.date);
+      await safe("news", () => fetchNews(bj.date));
+      await safe("shijing", () => fetchShijing());
+      await safe("quotes", () => fetchQuotes());
+      await safe("comments", () => fetchComments(bj));
+      await safe("daily_read", () => fetchDailyRead(bj.date));
     } else if (bj.hour === 5) {
-      res.shijing = await fetchShijing();
-      res.quotes = await fetchQuotes();
-      res.daily_read = await fetchDailyRead(bj.date);
+      await safe("shijing", () => fetchShijing());
+      await safe("quotes", () => fetchQuotes());
+      await safe("daily_read", () => fetchDailyRead(bj.date));
     } else {
-      res.news = await fetchNews(bj.date);
-      res.comments = await fetchComments(bj);
-      res.shijing = await fetchShijing();
-      res.quotes = await fetchQuotes();
-      res.daily_read = await fetchDailyRead(bj.date);
+      await safe("news", () => fetchNews(bj.date));
+      await safe("comments", () => fetchComments(bj));
+      await safe("shijing", () => fetchShijing());
+      await safe("quotes", () => fetchQuotes());
+      await safe("daily_read", () => fetchDailyRead(bj.date));
     }
   } catch (e) {
     say(`✗ 顶层异常: ${e}`);
@@ -1038,10 +1187,18 @@ Deno.serve(async (req: Request) => {
   // ?dedupe=quotes|news：一次性清理重复行（历史去重失效导致的重复行），保留每组最早/最全的一条
   const dedupeTarget = url.searchParams.get("dedupe") || "";
   if (dedupeTarget) {
-    if (dedupeTarget !== "quotes" && dedupeTarget !== "news") {
-      return json({ ok: false, error: `unknown dedupe target: ${dedupeTarget}` }, 400);
+    if (!["quotes", "news", "shijing"].includes(dedupeTarget)) {
+      return json(
+        { ok: false, error: `unknown dedupe target: ${dedupeTarget} (可用: quotes / news / shijing)` },
+        400
+      );
     }
-    const result = dedupeTarget === "quotes" ? await dedupeQuotes() : await dedupeNews();
+    const result =
+      dedupeTarget === "quotes"
+        ? await dedupeQuotes()
+        : dedupeTarget === "news"
+          ? await dedupeNews()
+          : await dedupeShijing();
     return json({ ok: true, dedupe: dedupeTarget, ...result });
   }
   // ?migrate=paizaobao：把历史「派早报」条目从 少数派 改判到专用 source（一次性维护）
@@ -1077,12 +1234,14 @@ Deno.serve(async (req: Request) => {
     }
     onlyFeed = picked.length ? picked : undefined;
   }
+  // ?only=shijing|quotes|news|comments|daily_read：只重抓单个数据源（维护/补抓用）
+  const onlySource = url.searchParams.get("only") || undefined;
 
   if (sync || typeof EdgeRuntime === "undefined") {
-    return json(await runCrawl(force, onlyFeed));
+    return json(await runCrawl(force, onlyFeed, onlySource));
   }
 
-  EdgeRuntime.waitUntil(runCrawl(force, onlyFeed));
+  EdgeRuntime.waitUntil(runCrawl(force, onlyFeed, onlySource));
   const bj = bjParts();
   return json({
     ok: true,

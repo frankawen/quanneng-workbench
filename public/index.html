@@ -1154,7 +1154,7 @@ const CFG = {
 };
 
 // 构建版本戳（用于确认浏览器是否加载了最新版；改版时递增）
-const BUILD_VERSION = '2026-09-10a';
+const BUILD_VERSION = '2026-09-14a';
 
 // ============================================================
 // Supabase 工具函数（带重试和详细错误）
@@ -2423,7 +2423,9 @@ async function loadDailyRead(tab = 'news') {
       sbQuery('news', { filter: { property: 'source', operator: 'eq', value: 'ZAKER' }, order: 'crawled_at desc', limit: 10 }).catch(() => []),
       // 派早报：走 tag 页专用源（少数派首页横幅发布时间不固定，8:30 档常抓空）
       sbQuery('news', { filter: { property: 'source', operator: 'eq', value: '派早报' }, order: 'crawled_at desc', limit: 3 }).catch(() => []),
-      sbQuery('shijing', { order: 'title asc', limit: 100 }),
+      // 数据体检：过滤历史遗留的「只有标题、无正文」坏条目（曾导致诗经显示只剩标题）
+      sbQuery('shijing', { order: 'title asc', limit: 100 }).then(rows =>
+        (rows || []).filter(p => p.content && String(p.content).trim().length >= 12)),
       sbQuery('quotes', { order: 'crawled_at desc', limit: 100 }),
       sbQuery('comments', { order: 'crawled_at desc', limit: 20 })
     ]);
