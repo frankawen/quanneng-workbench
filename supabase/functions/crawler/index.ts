@@ -353,81 +353,59 @@ function squash(s: string): string {
 // 主源中新网（2026-09-07c→d 回归）：chinanews.com.cn RSS 滚动新闻，每日 ~30 条，稳定可靠。
 // 点缀说明：
 //   · ZAKER myzaker.com 首页 SSR（~7 条/天静态可爬，同文多链须按 title 去重）；
-//   · 少数派 sspai.com 首页 SSR（RSS 滞后 1~2 天，保留「派早报」置顶逻辑）。
+//   · 少数派 sspai.com 官方 JSON API（/api/v1/article/index/page/get），结构化字段全、免解析、云端出口稳定。
+//       - 同一接口返回「少数派」常规文章 + 「派早报」（字段 morning_paper_title 非空即为早报）
+//       - 按 released_time 倒序，天然覆盖早报发布时间不固定的问题（无需多枪）
 // 人民网/新华网官方 RSS 均已冻结（人民网停在 2016/2025、新华网无日期停在 2022），不可用。
 // ============================================================
-const NEWS_FEEDS: { name: string; url: string; max: number; type: "rss" | "sspai_home" | "sspai_tag" | "zaker_home" }[] = [
+const NEWS_FEEDS: { name: string; url: string; max: number; type: "rss" | "sspai_api" | "zaker_home" }[] = [
   // 主源：中新网滚动新闻
   { name: "中新网", url: "https://www.chinanews.com.cn/rss/scroll-news.xml", max: 30, type: "rss" },
-  // 点缀：ZAKER 综合门户 + 少数派数字生活
+  // 点缀：ZAKER 综合门户 + 少数派数字生活（统一走官方 JSON API，按 morning_paper_title 拆源）
   { name: "ZAKER", url: "https://www.myzaker.com/", max: 10, type: "zaker_home" },
-  { name: "少数派", url: "https://sspai.com/", max: 8, type: "sspai_home" },
-  // 派早报（2026-09-10）：由 tag 页单独抓，前端置顶展示。
-  //   首页 SSR 只在早间横幅露出 1 条、且发布时间不固定（实测 06:38 / 08:00 都有），
-  //   8:30 档常抓空；tag 页按发布时间倒序列出最近 12 篇，稳定可靠。
-  {
-    name: "派早报",
-    url: "https://sspai.com/tag/%E6%B4%BE%E6%97%A9%E6%8A%A5",
-    max: 5,
-    type: "sspai_tag",
-  },
+  // 少数派：官方 JSON API（limit=20 足够覆盖每日新增 + 早报）
+  { name: "少数派", url: "https://sspai.com/api/v1/article/index/page/get?limit=20&offset=0&created_at=0", max: 8, type: "sspai_api" },
+  // 派早报：复用同一 API，解析器按 morning_paper_title 过滤；max 单独控制上限
+  { name: "派早报", url: "https://sspai.com/api/v1/article/index/page/get?limit=20&offset=0&created_at=0", max: 5, type: "sspai_api" },
 ];
 
-/** 解析少数派首页 SSR HTML，提取文章卡片（标题 + 链接 + 摘要） */
-function parseSspaiHome(html: string, source: string, dateStr: string, maxItems: number): Record<string, unknown>[] {
-  const doc = parse(html);
+/**
+ * 解析少数派官方 JSON API（/api/v1/article/index/page/get）。
+ * 同一接口返回「少数派」常规文章 + 「派早报」（标题以 "派早报" 开头即为早报）。
+ * 入参 source 为 "少数派" 或 "派早报"，按标题前缀自动过滤。
+ * 返回字段与原 HTML 解析器兼容：title, url, summary, source, date, category。
+ */
+function parseSspaiApi(jsonText: string, source: string, dateStr: string, maxItems: number): Record<string, unknown>[] {
+  let data: unknown;
+  try {
+    data = JSON.parse(jsonText);
+  } catch {
+    return [];
+  }
+  const list = (data as Record<string, unknown>)?.data;
+  if (!Array.isArray(list)) return [];
+
   const items: Record<string, unknown>[] = [];
   const seen = new Set<string>();
-  for (const a of qsa(doc, 'a[href*="/post/"]')) {
-    let href = (a.getAttribute("href") || "").trim();
-    if (!href) continue;
-    if (!href.startsWith("http")) href = `https://sspai.com${href}`;
-    // 归一化后去重
-    const m = href.match(/\/post\/(\d+)/);
-    if (!m) continue;
-    const url = `https://sspai.com/post/${m[1]}`;
+  for (const it of list) {
+    const obj = it as Record<string, unknown>;
+    const id = obj.id;
+    const title = String(obj.title || "").trim();
+    const summary = String(obj.summary || "").trim();
+    if (!id || !title || title.length < 4) continue;
+    const url = `https://sspai.com/post/${id}`;
     if (seen.has(url)) continue;
-    // 标题：普通卡片在 p.article__card__title；「派早报」横幅卡在 .morning__paper__board__card__desc
-    const title = squash(oneText(qs(a, ".article__card__title"))) || squash(oneText(qs(a, ".morning__paper__board__card__desc")));
-    if (!title || title.length < 6) continue;
-    // 派早报已由 tag 页专用源抓取（前端置顶），此处跳过，避免同文在两个 source 下重复出现
-    if (title.startsWith("派早报")) continue;
-    const summary = squash(oneText(qs(a, ".article__card__summary")));
+
+    // 按 source 过滤：派早报只取标题以 "派早报" 开头；少数派跳过早报
+    const isMorning = title.startsWith("派早报");
+    if (source === "派早报" && !isMorning) continue;
+    if (source === "少数派" && isMorning) continue;
+
     seen.add(url);
     items.push({
       title: title.slice(0, 80),
       url,
       summary: summary.slice(0, 200),
-      source,
-      date: dateStr,
-      category: source,
-    });
-    if (items.length >= maxItems) break;
-  }
-  return items;
-}
-
-/**
- * 解析少数派 tag 页 SSR（如 /tag/派早报），提取文章卡片：
- * <a href="/post/ID">…<div class="title text_ellipsis2">标题</div>…</a>
- * 按 URL 去重，标题以「派早报」等前缀归到同一个 source。
- */
-function parseSspaiTag(html: string, source: string, dateStr: string, maxItems: number): Record<string, unknown>[] {
-  const doc = parse(html);
-  const items: Record<string, unknown>[] = [];
-  const seen = new Set<string>();
-  for (const a of qsa(doc, 'a[href^="/post/"]')) {
-    const m = (a.getAttribute("href") || "").match(/\/post\/(\d+)/);
-    if (!m) continue;
-    const url = `https://sspai.com/post/${m[1]}`;
-    if (seen.has(url)) continue;
-    const title = squash(oneText(qs(a, ".title")));
-    if (!title || title.length < 4) continue;
-    seen.add(url);
-    items.push({
-      title: title.slice(0, 80),
-      url,
-      summary: "",
       source,
       date: dateStr,
       category: source,
@@ -520,7 +498,7 @@ function parseRss(xml: string, source: string, dateStr: string, max: number): Re
 }
 
 // 新闻源英文标识 → 实际 source 名（供 ?feeds= 参数使用，避免 URL 里传中文；支持逗号分隔多源）
-// 注：sspai 一并带出派早报，让 8:30 那一档也能补齐当天早报（无需改 pg_cron SQL）
+// sspai：官方 JSON API 单次请求同时返回「少数派」常规文章 + 「派早报」（按 morning_paper_title 拆分）
 const FEED_ALIASES: Record<string, string[]> = {
   zaker: ["ZAKER"],
   chinanews: ["中新网"],
@@ -546,17 +524,14 @@ async function fetchNews(dateStr: string, onlySources?: string[]) {
   const results = await mapLimit(feeds, 2, async (f) => {
     let items: Record<string, unknown>[] = [];
     if (f.type === "zaker_home") {
-      // 主源 ZAKER：首页 SSR HTML（综合门户聚合，标题/来源/时间，无正文摘要）
+      // ZAKER：首页 SSR HTML（综合门户聚合，标题/来源/时间，无正文摘要）
       const html = await httpText(f.url, { timeout: 25_000, headers: { "User-Agent": UA } });
       items = html ? parseZakerHome(html, f.name, dateStr, f.max) : [];
-    } else if (f.type === "sspai_home") {
-      // 少数派：首页 SSR HTML（RSS 滞后 1~2 天，弃用）
-      const html = await httpText(f.url, { timeout: 25_000 });
-      items = html ? parseSspaiHome(html, f.name, dateStr, f.max) : [];
-    } else if (f.type === "sspai_tag") {
-      // 派早报：tag 页 SSR（首页横幅发布时间不固定，8:30 档常抓空）
-      const html = await httpText(f.url, { timeout: 25_000 });
-      items = html ? parseSspaiTag(html, f.name, dateStr, f.max) : [];
+    } else if (f.type === "sspai_api") {
+      // 少数派 / 派早报：官方 JSON API（结构化、免解析、云端出口稳定）
+      // 同一接口返回两类数据，解析器按 morning_paper_title 自动拆分
+      const jsonText = await httpText(f.url, { timeout: 15_000, headers: { "User-Agent": UA } });
+      items = jsonText ? parseSspaiApi(jsonText, f.name, dateStr, f.max) : [];
     } else {
       const xml = await httpText(f.url, { timeout: 25_000 });
       items = xml ? parseRss(xml, f.name, dateStr, f.max) : [];
