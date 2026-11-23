@@ -359,8 +359,16 @@ function squash(s: string): string {
 // 人民网/新华网官方 RSS 均已冻结（人民网停在 2016/2025、新华网无日期停在 2022），不可用。
 // ============================================================
 const NEWS_FEEDS: { name: string; url: string; max: number; type: "rss" | "sspai_api" | "zaker_home" }[] = [
-  // 主源：中新网滚动新闻
+  // 主源：中新网滚动新闻（云端 IP 可能被屏蔽，保留但允许失败）
   { name: "中新网", url: "https://www.chinanews.com.cn/rss/scroll-news.xml", max: 30, type: "rss" },
+  // 备用源 1：网易新闻态度（云端友好）
+  { name: "网易新闻", url: "http://news.163.com/special/00011K6L/rss_newsattitude.xml", max: 20, type: "rss" },
+  // 备用源 2：凤凰网综合
+  { name: "凤凰网", url: "https://news.ifeng.com/rss/index.xml", max: 20, type: "rss" },
+  // 备用源 3：澎湃新闻
+  { name: "澎湃新闻", url: "https://www.thepaper.cn/rss_feed.jsp?nodeid=25949", max: 20, type: "rss" },
+  // 备用源 4：新浪新闻滚动
+  { name: "新浪新闻", url: "http://rss.sina.com.cn/news/marquee/ddt.xml", max: 20, type: "rss" },
   // 点缀：ZAKER 综合门户 + 少数派数字生活（统一走官方 JSON API，按 morning_paper_title 拆源）
   { name: "ZAKER", url: "https://www.myzaker.com/", max: 10, type: "zaker_home" },
   // 少数派：官方 JSON API（limit=20 足够覆盖每日新增 + 早报）
@@ -368,6 +376,9 @@ const NEWS_FEEDS: { name: string; url: string; max: number; type: "rss" | "sspai
   // 派早报：复用同一 API，解析器按 morning_paper_title 过滤；max 单独控制上限
   { name: "派早报", url: "https://sspai.com/api/v1/article/index/page/get?limit=20&offset=0&created_at=0", max: 5, type: "sspai_api" },
 ];
+
+// 允许失败的源（云端可能被屏蔽），失败只记录警告不阻断整体
+const ALLOW_FAIL_SOURCES = new Set(["中新网"]);
 
 /**
  * 解析少数派官方 JSON API（/api/v1/article/index/page/get）。
@@ -502,13 +513,17 @@ function parseRss(xml: string, source: string, dateStr: string, max: number): Re
 const FEED_ALIASES: Record<string, string[]> = {
   zaker: ["ZAKER"],
   chinanews: ["中新网"],
+  wangyi: ["网易新闻"],
+  ifeng: ["凤凰网"],
+  thepaper: ["澎湃新闻"],
+  sina: ["新浪新闻"],
   sspai: ["少数派", "派早报"],
   paizaobao: ["派早报"],
 };
 
 async function fetchNews(dateStr: string, onlySources?: string[]) {
   say(
-    `[新闻] 抓取多源聚合（中新网为主 + ZAKER/少数派点缀 + 派早报置顶）${
+    `[新闻] 抓取多源聚合（中新网为主 + 网易/凤凰/澎湃/新浪备用 + ZAKER/少数派点缀 + 派早报置顶）${
       onlySources?.length ? `，仅抓 ${onlySources.join("/")}` : ""
     }...`
   );
@@ -516,27 +531,36 @@ async function fetchNews(dateStr: string, onlySources?: string[]) {
   if (onlySources?.length) {
     feeds = NEWS_FEEDS.filter((f) => onlySources.includes(f.name));
     if (!feeds.length) {
-      say(`  ! 未知新闻源标识: ${onlySources.join("/")}（可用: chinanews / zaker / sspai / paizaobao）`);
+      say(`  ! 未知新闻源标识: ${onlySources.join("/")}（可用: chinanews / 163 / ifeng / thepaper / sina / zaker / sspai / paizaobao）`);
       return 0;
     }
   }
   const all: Record<string, unknown>[] = [];
   const results = await mapLimit(feeds, 2, async (f) => {
     let items: Record<string, unknown>[] = [];
-    if (f.type === "zaker_home") {
-      // ZAKER：首页 SSR HTML（综合门户聚合，标题/来源/时间，无正文摘要）
-      const html = await httpText(f.url, { timeout: 25_000, headers: { "User-Agent": UA } });
-      items = html ? parseZakerHome(html, f.name, dateStr, f.max) : [];
-    } else if (f.type === "sspai_api") {
-      // 少数派 / 派早报：官方 JSON API（结构化、免解析、云端出口稳定）
-      // 同一接口返回两类数据，解析器按 morning_paper_title 自动拆分
-      const jsonText = await httpText(f.url, { timeout: 15_000, headers: { "User-Agent": UA } });
-      items = jsonText ? parseSspaiApi(jsonText, f.name, dateStr, f.max) : [];
-    } else {
-      const xml = await httpText(f.url, { timeout: 25_000 });
-      items = xml ? parseRss(xml, f.name, dateStr, f.max) : [];
+    try {
+      if (f.type === "zaker_home") {
+        // ZAKER：首页 SSR HTML（综合门户聚合，标题/来源/时间，无正文摘要）
+        const html = await httpText(f.url, { timeout: 25_000, headers: { "User-Agent": UA } });
+        items = html ? parseZakerHome(html, f.name, dateStr, f.max) : [];
+      } else if (f.type === "sspai_api") {
+        // 少数派 / 派早报：官方 JSON API（结构化、免解析、云端出口稳定）
+        // 同一接口返回两类数据，解析器按 morning_paper_title 自动拆分
+        const jsonText = await httpText(f.url, { timeout: 15_000, headers: { "User-Agent": UA } });
+        items = jsonText ? parseSspaiApi(jsonText, f.name, dateStr, f.max) : [];
+      } else {
+        const xml = await httpText(f.url, { timeout: 25_000 });
+        items = xml ? parseRss(xml, f.name, dateStr, f.max) : [];
+      }
+    } catch (e) {
+      say(`  ! ${f.name} 抓取异常: ${e}`);
     }
-    say(`  · ${f.name}: ${items.length} 条`);
+    // 允许失败的源（云端 IP 被屏蔽）：只记录警告，不计入失败
+    if (!items.length && ALLOW_FAIL_SOURCES.has(f.name)) {
+      say(`  ⚠ ${f.name}: 0 条（云端可能被屏蔽，已跳过）`);
+    } else {
+      say(`  · ${f.name}: ${items.length} 条`);
+    }
     return items;
   });
   for (const p of results) if (p) all.push(...p);
