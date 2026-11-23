@@ -1,9 +1,3 @@
-# 全能工作台
-
-集成式生活工作台，单文件前端 + Supabase 数据同步，部署在 GitHub Pages 固定链接：
-
-**https://frankawen.github.io/quanneng-workbench/**
-
 ## 功能模块
 
 | 模块 | 说明 | 数据表 |
