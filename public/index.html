@@ -2837,14 +2837,6 @@ function bindEvents() {
 // ============================================================
 // 初始化
 // ============================================================
-function init() {
-  $('fn-date').value = today();
-  const stamp = $('build-stamp'); if (stamp) stamp.textContent = 'v' + BUILD_VERSION;
-  console.log('QuanNengWorkbench build', BUILD_VERSION);
-  bindEvents();
-  initTheme();
-  switchModule('overview');
-
 // ④ 主题切换：localStorage 记忆 + 首次访问跟随系统偏好
 function initTheme() {
   const saved = localStorage.getItem('qn-theme');
@@ -2859,7 +2851,15 @@ function initTheme() {
     btn.setAttribute('aria-label', next === 'dark' ? '切换到浅色模式' : '切换到深色模式');
   });
 }
-  
+
+function init() {
+  const d = $('fn-date'); if (d) d.value = today(); // 加固：元素缺失不抛错，避免初始化中断白屏
+  const stamp = $('build-stamp'); if (stamp) stamp.textContent = 'v' + BUILD_VERSION;
+  console.log('QuanNengWorkbench build', BUILD_VERSION);
+  bindEvents();
+  initTheme();
+  switchModule('overview');
+
   // 自动刷新
   setInterval(() => { if (!document.hidden) loadModule(currentModule); }, 30 * 60 * 1000);
 }
